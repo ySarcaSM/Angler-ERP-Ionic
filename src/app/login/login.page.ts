@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { AuthService } from '../core/auth.service';
 
 @Component({
@@ -13,7 +13,7 @@ export class LoginPage {
   loading = false;
   error = '';
 
-  constructor(private readonly auth: AuthService) {}
+  private readonly auth = inject(AuthService);
 
   async submit(): Promise<void> {
     this.error = '';
