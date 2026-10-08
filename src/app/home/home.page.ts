@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { AuthService } from '../core/auth.service';
 
 @Component({
@@ -8,5 +8,5 @@ import { AuthService } from '../core/auth.service';
   standalone: false
 })
 export class HomePage {
-  constructor(public readonly auth: AuthService) {}
+  public readonly auth = inject(AuthService);
 }
