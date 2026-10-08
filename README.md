@@ -54,3 +54,5 @@ Existing collection names are intentionally preserved:
 
 GitHub Actions validates the production build, lint and unit tests on this branch and pull requests targeting `main`.
 
+
+<!-- CI trigger: Angular lint fixes -->
