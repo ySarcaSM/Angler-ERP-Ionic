@@ -26,11 +26,9 @@ export class ClientsPage implements OnInit {
   editingId?: string;
   form: ClientForm = emptyClient();
 
-  constructor(
-    public readonly auth: AuthService,
-    private readonly service: ClientsService,
-    private readonly toastController: ToastController
-  ) {}
+  public readonly auth = inject(AuthService);
+  private readonly service = inject(ClientsService);
+  private readonly toastController = inject(ToastController);
 
   ngOnInit(): void { void this.load(); }
 
