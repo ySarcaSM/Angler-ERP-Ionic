@@ -1,0 +1,7 @@
+{
+  "name": "ANGLER-ERP-Ionic",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}
