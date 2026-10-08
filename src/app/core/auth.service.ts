@@ -4,7 +4,13 @@ import { BehaviorSubject } from 'rxjs';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { firebaseAuth, firestore } from './firebase';
-import { UserProfile } from '../models/erp.models';
+import { CompanyMembership, CompanyRole, OperatorGroup, UserProfile } from '../models/erp.models';
+
+const READ_GROUPS: Record<OperatorGroup, readonly string[]> = {
+  management: ['clients', 'products', 'sales', 'purchases', 'suppliers', 'locations', 'stockMovements', 'counters'],
+  financial: ['financialTransactions', 'sales', 'purchases', 'products', 'stockMovements', 'counters'],
+  budgets: ['budgets', 'formulas', 'clients']
+};
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -18,8 +24,7 @@ export class AuthService {
   constructor(private readonly router: Router) {
     onAuthStateChanged(firebaseAuth, async user => {
       this.userSubject.next(user);
-      let profile: UserProfile | null = null;
-      if (user) profile = await this.loadProfile(user);
+      const profile = user ? await this.loadProfile(user) : null;
       this.profileSubject.next(profile);
       this.resolveReady();
     });
@@ -28,7 +33,12 @@ export class AuthService {
   get currentUser(): User | null { return this.userSubject.value; }
   get profile(): UserProfile | null { return this.profileSubject.value; }
   get companyId(): string | null { return this.profile?.companyId ?? null; }
-  get role(): string { return this.profile?.role ?? 'viewer'; }
+  get role(): CompanyRole { return this.profile?.role ?? 'viewer'; }
+  get operatorGroup(): OperatorGroup | null {
+    const companyId = this.companyId;
+    if (!companyId || this.role !== 'operator') return null;
+    return this.profile?.memberships[companyId]?.operatorGroup ?? null;
+  }
 
   ready(): Promise<void> { return this.readyPromise; }
 
@@ -51,11 +61,30 @@ export class AuthService {
     await this.router.navigateByUrl('/login');
   }
 
-  canWrite(): boolean {
+  isSuperAdmin(): boolean {
+    return this.currentUser?.email === 'admin@angler-erp.local';
+  }
+
+  canReadCollection(collectionName: string): boolean {
+    if (this.isSuperAdmin()) return true;
+    const profile = this.profile;
+    if (!profile?.companyId) return false;
+    if (profile.role !== 'operator') return true;
+    const group = profile.memberships[profile.companyId]?.operatorGroup;
+    return !!group && READ_GROUPS[group].includes(collectionName);
+  }
+
+  canWriteCollection(_collectionName: string): boolean {
+    if (this.isSuperAdmin()) return true;
     return ['owner', 'admin', 'operator'].includes(this.role);
   }
 
+  canWrite(): boolean {
+    return this.canWriteCollection('');
+  }
+
   canDelete(): boolean {
+    if (this.isSuperAdmin()) return true;
     return ['owner', 'admin'].includes(this.role);
   }
 
@@ -63,14 +92,22 @@ export class AuthService {
     try {
       const snapshot = await getDoc(doc(firestore, 'users', user.uid));
       if (!snapshot.exists()) return null;
+
       const data = snapshot.data();
-      if (typeof data['companyId'] !== 'string' || !data['companyId'].length) return null;
+      const memberships = this.normalizeMemberships(data['memberships']);
+      const companyId = this.resolveCompanyId(data, memberships);
+      if (!companyId) return null;
+
+      const membership = memberships[companyId];
+      const role = membership?.active ? membership.role : this.normalizeRole(data['role']);
+
       return {
         uid: user.uid,
         email: user.email ?? undefined,
         displayName: user.displayName ?? undefined,
-        companyId: data['companyId'],
-        role: this.normalizeRole(data['role'])
+        companyId,
+        role,
+        memberships
       };
     } catch (error) {
       console.error('Não foi possível carregar o perfil da empresa.', error);
@@ -78,8 +115,35 @@ export class AuthService {
     }
   }
 
-  private normalizeRole(role: unknown): UserProfile['role'] {
-    return role === 'owner' || role === 'admin' || role === 'operator' || role === 'viewer'
+  private resolveCompanyId(data: Record<string, any>, memberships: Record<string, CompanyMembership>): string | null {
+    if (typeof data['companyId'] === 'string' && data['companyId'].length) return data['companyId'];
+    const activeMembership = Object.entries(memberships).find(([, membership]) => membership.active);
+    return activeMembership?.[0] ?? null;
+  }
+
+  private normalizeMemberships(value: unknown): Record<string, CompanyMembership> {
+    if (!value || typeof value !== 'object') return {};
+    const result: Record<string, CompanyMembership> = {};
+
+    for (const [companyId, raw] of Object.entries(value as Record<string, any>)) {
+      if (!raw || typeof raw !== 'object') continue;
+      const role = this.normalizeRole(raw['role']);
+      result[companyId] = {
+        active: raw['active'] === true,
+        role,
+        operatorGroup: this.normalizeOperatorGroup(raw['operatorGroup']),
+        accessRequestId: typeof raw['accessRequestId'] === 'string' ? raw['accessRequestId'] : undefined
+      };
+    }
+    return result;
+  }
+
+  private normalizeRole(role: unknown): CompanyRole {
+    return role === 'owner' || role === 'admin' || role === 'manager' || role === 'operator' || role === 'viewer'
       ? role : 'viewer';
+  }
+
+  private normalizeOperatorGroup(group: unknown): OperatorGroup | undefined {
+    return group === 'management' || group === 'financial' || group === 'budgets' ? group : undefined;
   }
 }
