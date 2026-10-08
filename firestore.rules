@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasProfile() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function profile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function hasCompany() {
+      return hasProfile()
+        && profile().companyId is string
+        && profile().companyId.size() > 0;
+    }
+
+    function sameCompany(companyId) {
+      return hasCompany() && profile().companyId == companyId;
+    }
+
+    function canWrite() {
+      return hasCompany() && profile().role in ['owner', 'admin', 'operator'];
+    }
+
+    function canDelete() {
+      return hasCompany() && profile().role in ['owner', 'admin'];
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && request.auth.uid == userId;
+      allow create, update, delete: if false;
+    }
+
+    match /clients/{clientId} {
+      allow read: if sameCompany(resource.data.companyId);
+      allow create: if canWrite()
+        && request.resource.data.companyId == profile().companyId;
+      allow update: if sameCompany(resource.data.companyId)
+        && canWrite()
+        && request.resource.data.companyId == resource.data.companyId;
+      allow delete: if sameCompany(resource.data.companyId) && canDelete();
+    }
+
+    match /products/{productId} {
+      allow read: if sameCompany(resource.data.companyId);
+      allow create: if canWrite()
+        && request.resource.data.companyId == profile().companyId;
+      allow update: if sameCompany(resource.data.companyId)
+        && canWrite()
+        && request.resource.data.companyId == resource.data.companyId;
+      allow delete: if sameCompany(resource.data.companyId) && canDelete();
+    }
+
+    // Default deny: add explicit, reviewed rules for any future collection.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
