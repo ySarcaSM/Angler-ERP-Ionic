@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ToastController } from '@ionic/angular';
+import { ToastController } from '@ionic/angular/lazy';
 import { AuthService } from '../core/auth.service';
 import { ClientRecord } from '../models/erp.models';
 import { ClientsService } from '../services/clients.service';
