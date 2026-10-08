@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
-import { firebaseAuth, firestore } from './firebase';
+import { getFirebaseAuth, getFirestoreDb } from './firebase';
 import { CompanyMembership, CompanyRole, OperatorGroup, UserProfile } from '../models/erp.models';
 
 const READ_GROUPS: Record<OperatorGroup, readonly string[]> = {
@@ -24,7 +24,7 @@ export class AuthService {
   private readonly router = inject(Router);
 
   constructor() {
-    onAuthStateChanged(firebaseAuth, async user => {
+    onAuthStateChanged(getFirebaseAuth(), async user => {
       this.userSubject.next(user);
       const profile = user ? await this.loadProfile(user) : null;
       this.profileSubject.next(profile);
@@ -45,10 +45,10 @@ export class AuthService {
   ready(): Promise<void> { return this.readyPromise; }
 
   async signIn(email: string, password: string): Promise<void> {
-    const credential = await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
+    const credential = await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
     const profile = await this.loadProfile(credential.user);
     if (!profile?.companyId) {
-      await signOut(firebaseAuth);
+      await signOut(getFirebaseAuth());
       throw new Error('Seu usuário não está associado a uma empresa. Solicite acesso ao administrador.');
     }
     this.userSubject.next(credential.user);
@@ -57,7 +57,7 @@ export class AuthService {
   }
 
   async signOut(): Promise<void> {
-    await signOut(firebaseAuth);
+    await signOut(getFirebaseAuth());
     this.userSubject.next(null);
     this.profileSubject.next(null);
     await this.router.navigateByUrl('/login');
@@ -92,7 +92,7 @@ export class AuthService {
 
   private async loadProfile(user: User): Promise<UserProfile | null> {
     try {
-      const snapshot = await getDoc(doc(firestore, 'users', user.uid));
+      const snapshot = await getDoc(doc(getFirestoreDb(), 'users', user.uid));
       if (!snapshot.exists()) return null;
 
       const data = snapshot.data();
