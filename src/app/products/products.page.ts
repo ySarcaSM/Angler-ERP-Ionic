@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { ToastController } from '@ionic/angular/lazy';
 import { AuthService } from '../core/auth.service';
 import { ProductRecord } from '../models/erp.models';
