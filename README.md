@@ -58,3 +58,5 @@ GitHub Actions validates the production build, lint and unit tests on this branc
 <!-- CI trigger: Angular lint fixes -->
 
 <!-- CI trigger: fix malformed newline literals -->
+
+<!-- CI trigger: isolated Firebase test environment -->
