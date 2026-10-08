@@ -106,13 +106,7 @@
           },
           "configurations": {
             "ci": {
-              "watch": false,
-              "fileReplacements": [
-                {
-                  "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.test.ts"
-                }
-              ]
+              "watch": false
             }
           }
         },
