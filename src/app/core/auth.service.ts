@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
@@ -21,7 +21,7 @@ export class AuthService {
   private resolveReady!: () => void;
   private readonly readyPromise = new Promise<void>(resolve => this.resolveReady = resolve);
 
-  constructor(private readonly router: Router) {
+  private readonly router = inject(Router);\n\n  constructor() {
     onAuthStateChanged(firebaseAuth, async user => {
       this.userSubject.next(user);
       const profile = user ? await this.loadProfile(user) : null;
