@@ -1,0 +1,22 @@
+.login-content { --background: #f4f7fb; }
+.login-shell { min-height: 100%; display: grid; grid-template-columns: minmax(300px, 0.9fr) 1.1fr; }
+.brand-panel { background: linear-gradient(145deg, #102b46, #164e63); color: #fff; padding: clamp(2rem, 6vw, 5rem); display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
+.brand-panel::after { content: ''; position: absolute; width: 340px; height: 340px; border: 1px solid #ffffff20; border-radius: 50%; right: -100px; bottom: -130px; box-shadow: 0 0 0 45px #ffffff08, 0 0 0 90px #ffffff05; }
+.brand-mark { width: 58px; height: 58px; border-radius: 17px; display: grid; place-items: center; background: #45c4b0; color: #092e43; font-size: 2rem; margin-bottom: 2.5rem; }
+.eyebrow { color: #31a995; font-size: .72rem; letter-spacing: .16em; font-weight: 800; margin: 0 0 .75rem; }
+.brand-panel .eyebrow { color: #72ddce; }
+h1 { font-size: clamp(2.5rem, 5vw, 4rem); letter-spacing: -.06em; margin: 0; font-weight: 800; }
+h1 span { color: #5cd5c1; }
+.brand-copy { color: #d0e1e9; font-size: 1.05rem; max-width: 300px; line-height: 1.7; }
+.brand-footer { position: absolute; bottom: 2rem; color: #a8c4d1; font-size: .8rem; }
+.form-panel { display: grid; place-items: center; padding: 2rem; }
+.form-wrap { width: min(100%, 410px); }
+h2 { color: #152c40; font-size: 2rem; margin: 0 0 .6rem; font-weight: 750; }
+.muted { color: #758397; margin-bottom: 2rem; }
+.field { --background: #fff; border: 1px solid #dce4ec; border-radius: 12px; margin-bottom: 1rem; padding: .45rem .75rem; }
+.field ion-label { color: #5c6c7f; font-weight: 600; }
+.submit-button { margin-top: 1.5rem; --background: #126e75; --border-radius: 12px; height: 50px; font-weight: 700; }
+.error { color: #b42318; font-size: .9rem; }
+.security-note { color: #718096; display: flex; align-items: center; gap: .5rem; font-size: .8rem; margin-top: 2rem; }
+.security-note ion-icon { color: #168c7c; font-size: 1.1rem; }
+@media (max-width: 760px) { .login-shell { grid-template-columns: 1fr; } .brand-panel { min-height: 240px; padding: 2rem; } .brand-mark { margin-bottom: 1.25rem; } .brand-footer { display: none; } .brand-copy { margin-bottom: 0; } .form-panel { padding: 2.25rem 1.25rem; } }
