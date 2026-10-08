@@ -10,6 +10,7 @@ import { ProductRecord } from '../models/erp.models';
 @Injectable({ providedIn: 'root' })
 export class ProductsService {
   private readonly collectionName = 'products';
+  private readonly auth = inject(AuthService);
 
 
 
