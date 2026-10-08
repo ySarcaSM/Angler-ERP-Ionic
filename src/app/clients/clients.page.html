@@ -17,24 +17,24 @@
       <div class="record-count">{{ filtered.length }} registro(s)</div>
     </div>
     <div class="table-card">
-      <div *ngIf="loading" class="state"><ion-spinner></ion-spinner><p>Carregando clientes...</p></div>
-      <div *ngIf="!loading && filtered.length === 0" class="state">
+      @if (loading) {<div class="state"><ion-spinner></ion-spinner><p>Carregando clientes...</p></div>}
+      @if (!loading && filtered.length === 0) {<div class="state">
         <ion-icon name="people-outline"></ion-icon><h3>Nenhum cliente encontrado</h3><p>Cadastre o primeiro cliente ou ajuste a busca.</p>
-      </div>
-      <div class="table-scroll" *ngIf="!loading && filtered.length">
+      </div>}
+      @if (!loading && filtered.length) {<div class="table-scroll">
         <table>
           <thead><tr><th>Cliente</th><th>Documento</th><th>Contato</th><th>Status</th><th class="actions-col">Ações</th></tr></thead>
           <tbody>
-            <tr *ngFor="let client of filtered">
+            @for (client of filtered; track client.id) {<tr>
               <td><div class="primary-cell">{{ client.name }}</div><div class="secondary-cell">{{ client.email || 'Sem e-mail' }}</div></td>
               <td>{{ client.document || '—' }}</td>
               <td><div>{{ client.phone || '—' }}</div><div class="secondary-cell">{{ client.contact || '' }}</div></td>
               <td><span class="status" [class.inactive]="client.active === false">{{ client.active === false ? 'Inativo' : 'Ativo' }}</span></td>
               <td class="actions-col"><ion-button fill="clear" size="small" aria-label="Editar cliente" (click)="openEdit(client)" [disabled]="!auth.canWrite()"><ion-icon name="create-outline"></ion-icon></ion-button><ion-button fill="clear" color="danger" size="small" aria-label="Excluir cliente" (click)="remove(client)" [disabled]="!auth.canDelete()"><ion-icon name="trash-outline"></ion-icon></ion-button></td>
-            </tr>
+            </tr>}
           </tbody>
         </table>
-      </div>
+      </div>}
     </div>
   </div>
 
