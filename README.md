@@ -48,3 +48,8 @@ Existing collection names are intentionally preserved:
 - `viewer` can read but not write; only `owner` and `admin` can delete.
 - Firebase web config is client configuration, not an Admin SDK secret. Never add service-account credentials to frontend code.
 - Rules deny access to collections not explicitly covered; review and add scoped rules before enabling other ERP modules.
+
+
+## Validation
+
+GitHub Actions validates the production build, lint and unit tests on this branch and pull requests targeting `main`.
