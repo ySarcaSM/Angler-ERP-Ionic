@@ -16,20 +16,23 @@
       <div class="welcome-graphic"><ion-icon name="analytics-outline"></ion-icon></div>
     </aside>
 
-    <div class="section-heading"><div><h2>Áreas de trabalho</h2><p>Acesse rapidamente os principais cadastros do ERP.</p></div><span class="role-chip">{{ auth.profile?.role || 'usuário' }}</span></div>
+    <div class="section-heading">
+      <div><h2>Áreas de trabalho</h2><p>Acesse rapidamente os principais cadastros do ERP.</p></div>
+      <span class="role-chip">{{ auth.profile?.role || 'usuário' }}{{ auth.operatorGroup ? ' • ' + auth.operatorGroup : '' }}</span>
+    </div>
 
     <div class="module-grid">
-      <a class="module-card" routerLink="/clientes">
+      <a class="module-card" routerLink="/clientes" *ngIf="auth.canReadCollection('clients')">
         <div class="module-icon teal"><ion-icon name="people-outline"></ion-icon></div>
         <div class="module-copy"><h3>Clientes</h3><p>Dados cadastrais, contatos e relacionamento comercial.</p><span class="card-link">Abrir clientes <ion-icon name="arrow-forward-outline"></ion-icon></span></div>
       </a>
-      <a class="module-card" routerLink="/produtos">
+      <a class="module-card" routerLink="/produtos" *ngIf="auth.canReadCollection('products')">
         <div class="module-icon blue"><ion-icon name="cube-outline"></ion-icon></div>
         <div class="module-copy"><h3>Produtos</h3><p>Catálogo, preços e acompanhamento do estoque.</p><span class="card-link">Abrir produtos <ion-icon name="arrow-forward-outline"></ion-icon></span></div>
       </a>
     </div>
 
-    <div class="security-banner"><ion-icon name="shield-checkmark-outline"></ion-icon><div><strong>Dados isolados por empresa</strong><p>O acesso é limitado à empresa vinculada ao seu perfil e validado pelas regras do Firestore.</p></div></div>
+    <div class="security-banner"><ion-icon name="shield-checkmark-outline"></ion-icon><div><strong>Dados isolados por empresa</strong><p>O acesso é limitado à empresa vinculada ao seu perfil, ao grupo do operador e validado pelas regras do Firestore.</p></div></div>
     <footer>AnglerERP <span>•</span> Plataforma de gestão empresarial</footer>
   </div>
 </ion-content>
