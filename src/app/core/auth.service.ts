@@ -21,7 +21,9 @@ export class AuthService {
   private resolveReady!: () => void;
   private readonly readyPromise = new Promise<void>(resolve => this.resolveReady = resolve);
 
-  private readonly router = inject(Router);\n\n  constructor() {
+  private readonly router = inject(Router);
+
+  constructor() {
     onAuthStateChanged(firebaseAuth, async user => {
       this.userSubject.next(user);
       const profile = user ? await this.loadProfile(user) : null;
