@@ -1,65 +1,369 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
+    function isAuth() {
       return request.auth != null;
     }
 
-    function hasProfile() {
-      return signedIn()
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    function currentUser() {
+      let docPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return exists(docPath) ? get(docPath).data : null;
     }
 
-    function profile() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function companyMemberExists(companyId) {
+      return isAuth() &&
+        exists(/databases/$(database)/documents/companies/$(companyId)/members/$(request.auth.uid));
     }
 
-    function hasCompany() {
-      return hasProfile()
-        && profile().companyId is string
-        && profile().companyId.size() > 0;
+    function companyMemberData(companyId) {
+      return get(/databases/$(database)/documents/companies/$(companyId)/members/$(request.auth.uid)).data;
     }
 
-    function sameCompany(companyId) {
-      return hasCompany() && profile().companyId == companyId;
+    function isMember(companyId) {
+      let user = currentUser();
+      return isAuth() && user != null && (
+        user.companyId == companyId ||
+        ('memberships' in user &&
+          companyId in user.memberships &&
+          user.memberships[companyId].active == true) ||
+        (companyMemberExists(companyId) &&
+          companyMemberData(companyId).active == true)
+      );
     }
 
-    function canWrite() {
-      return hasCompany() && profile().role in ['owner', 'admin', 'operator'];
+    function roleForCompany(companyId) {
+      let user = currentUser();
+      return user != null && (
+        (companyMemberExists(companyId) &&
+         companyMemberData(companyId).active == true &&
+         companyMemberData(companyId).role is string)
+        ? companyMemberData(companyId).role
+        : (('memberships' in user &&
+            companyId in user.memberships &&
+            user.memberships[companyId].active == true &&
+            user.memberships[companyId].role is string)
+          ? user.memberships[companyId].role
+          : (user.companyId == companyId ? user.role : null))
+      );
     }
 
-    function canDelete() {
-      return hasCompany() && profile().role in ['owner', 'admin'];
+    function isCompanyOwner(companyId) {
+      return isAuth() &&
+        exists(/databases/$(database)/documents/companies/$(companyId)) &&
+        get(/databases/$(database)/documents/companies/$(companyId)).data.ownerUid == request.auth.uid;
+    }
+
+    function isAdmin(companyId) {
+      return isAuth() && (
+        isCompanyOwner(companyId) ||
+        roleForCompany(companyId) in ['owner', 'admin']
+      );
+    }
+
+    function isOwner(companyId) {
+      return isAuth() && (
+        isCompanyOwner(companyId) ||
+        roleForCompany(companyId) == 'owner'
+      );
+    }
+
+    function isOperator(companyId) {
+      return isAuth() &&
+        roleForCompany(companyId) == 'operator';
+    }
+
+    function operatorGroupForCompany(companyId) {
+      let user = currentUser();
+      return user != null &&
+        'memberships' in user &&
+        companyId in user.memberships &&
+        user.memberships[companyId].active == true &&
+        user.memberships[companyId].role == 'operator'
+        ? user.memberships[companyId].operatorGroup
+        : null;
+    }
+
+    function operatorCanReadCollection(companyId, collectionName) {
+      let group = operatorGroupForCompany(companyId);
+
+      return
+        (group == 'management' &&
+          collectionName in ['clients', 'products', 'sales', 'purchases', 'suppliers', 'locations', 'stockMovements', 'counters'])
+        ||
+        (group == 'financial' &&
+          collectionName in ['financialTransactions', 'sales', 'purchases', 'products', 'stockMovements', 'counters'])
+        ||
+        (group == 'budgets' &&
+          collectionName in ['budgets', 'formulas', 'clients']);
+    }
+
+    function isActiveCompany(companyId) {
+      return isAuth() &&
+        currentUser() != null &&
+        currentUser().companyId == companyId;
+    }
+
+    function canReadCollection(companyId, collectionName) {
+      return isSuperAdmin() ||
+        (isMember(companyId) &&
+          (roleForCompany(companyId) != 'operator' ||
+           operatorCanReadCollection(companyId, collectionName)));
+    }
+
+    function canWriteCollection(companyId, collectionName) {
+      return isSuperAdmin() ||
+        isCompanyOwner(companyId) ||
+        (
+          isMember(companyId) &&
+          roleForCompany(companyId) in ['owner', 'admin', 'operator']
+        );
+    }
+
+    function canWriteData(companyId) {
+      return isAdmin(companyId);
+    }
+
+    function canDeleteData(companyId) {
+      return isAdmin(companyId) || isOwner(companyId);
+    }
+
+    function isSuperAdmin() {
+      return isAuth() &&
+        request.auth.token.email == 'admin@angler-erp.local';
+    }
+
+    function isAdminManagingUser(userId) {
+      let user = currentUser();
+      return isAuth() &&
+        user != null &&
+        user.companyId is string &&
+        isAdmin(user.companyId) &&
+        'memberships' in resource.data &&
+        user.companyId in resource.data.memberships &&
+        resource.data.memberships[user.companyId].active == true;
+    }
+
+    function isAccessRequestOwnerApproval(userId) {
+      let grant = request.resource.data.accessControl;
+      let requestDoc = get(/databases/$(database)/documents/companyAccessRequests/$(grant.lastGrantedRequestId));
+      return isAuth() &&
+        grant.lastGrantedCompanyId is string &&
+        grant.lastGrantedRequestId is string &&
+        requestDoc.data.status == 'pending' &&
+        requestDoc.data.requesterUid == userId &&
+        requestDoc.data.companyId == grant.lastGrantedCompanyId &&
+        isAdmin(grant.lastGrantedCompanyId) &&
+        request.resource.data.memberships[grant.lastGrantedCompanyId].active == true &&
+        request.resource.data.memberships[grant.lastGrantedCompanyId].accessRequestId == grant.lastGrantedRequestId &&
+        request.resource.data.memberships[grant.lastGrantedCompanyId].role in ['owner', 'admin', 'manager', 'operator', 'viewer'] &&
+        request.resource.data.memberships.diff(resource.data.memberships).affectedKeys().hasOnly([grant.lastGrantedCompanyId]) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberships', 'accessControl', 'updatedAt']);
+    }
+
+    function isCompanyMembershipUpdate(userId) {
+      let grant = request.resource.data.accessControl;
+      return isAuth() &&
+        grant.lastGrantedCompanyId is string &&
+        isAdmin(grant.lastGrantedCompanyId) &&
+        request.resource.data.memberships[grant.lastGrantedCompanyId].active == true &&
+        request.resource.data.memberships[grant.lastGrantedCompanyId].role in ['owner', 'admin', 'manager', 'operator', 'viewer'] &&
+        request.resource.data.memberships.diff(resource.data.memberships).affectedKeys().hasOnly([grant.lastGrantedCompanyId]) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberships', 'accessControl', 'updatedAt']);
+    }
+
+    function isAccessibilityUpdate(userId) {
+      return isAuth() &&
+        request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['accessibilityPreferences']);
+    }
+
+    function isCompanySwitch() {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['companyId', 'role']) &&
+        request.resource.data.companyId is string &&
+        (
+          ('memberships' in resource.data &&
+            request.resource.data.companyId in resource.data.memberships &&
+            resource.data.memberships[request.resource.data.companyId].active == true &&
+            request.resource.data.role == resource.data.memberships[request.resource.data.companyId].role) ||
+          request.resource.data.companyId == resource.data.companyId ||
+          (
+            exists(/databases/$(database)/documents/companies/$(request.resource.data.companyId)) &&
+            get(/databases/$(database)/documents/companies/$(request.resource.data.companyId)).data.ownerUid == request.auth.uid &&
+            request.resource.data.role == 'owner'
+          )
+        );
     }
 
     match /users/{userId} {
-      allow read: if signedIn() && request.auth.uid == userId;
-      allow create, update, delete: if false;
+      allow get: if isSuperAdmin() ||
+        (isAuth() && request.auth.uid == userId) ||
+        isAdmin(resource.data.companyId) ||
+        isAdminManagingUser(userId);
+
+      allow list: if isSuperAdmin() ||
+        isAdmin(resource.data.companyId);
+
+      allow create: if isSuperAdmin() ||
+        (isAuth() && request.auth.uid == userId && (
+          request.resource.data.companyId == userId &&
+          request.resource.data.role == 'owner'
+        ));
+
+      allow update: if isSuperAdmin() ||
+        isAdmin(resource.data.companyId) ||
+        (isAuth() && 'accessControl' in request.resource.data && isAccessRequestOwnerApproval(userId)) ||
+        (isAuth() && 'accessControl' in request.resource.data && isCompanyMembershipUpdate(userId)) ||
+        (isAuth() && request.auth.uid == userId && isCompanySwitch()) ||
+        (isAuth() && request.auth.uid == userId && isAccessibilityUpdate(userId));
+
+      allow delete: if isSuperAdmin() || isAdmin(resource.data.companyId);
     }
 
-    match /clients/{clientId} {
-      allow read: if sameCompany(resource.data.companyId);
-      allow create: if canWrite()
-        && request.resource.data.companyId == profile().companyId;
-      allow update: if sameCompany(resource.data.companyId)
-        && canWrite()
-        && request.resource.data.companyId == resource.data.companyId;
-      allow delete: if sameCompany(resource.data.companyId) && canDelete();
+    match /companyAccessRequests/{requestId} {
+      allow create: if isAuth() &&
+        request.resource.data.requesterUid == request.auth.uid &&
+        request.resource.data.status == 'pending' &&
+        exists(/databases/$(database)/documents/companies/$(request.resource.data.companyId));
+
+      allow get: if isSuperAdmin() ||
+        (isAuth() && (
+          request.auth.uid == resource.data.requesterUid ||
+          isAdmin(resource.data.companyId)
+        ));
+
+      allow list: if isSuperAdmin() || isAdmin(resource.data.companyId) ||
+        (isAuth() && request.auth.uid == resource.data.requesterUid);
+
+      allow update: if isSuperAdmin() || isAdmin(resource.data.companyId);
+      allow delete: if isSuperAdmin() || isOwner(resource.data.companyId);
     }
 
-    match /products/{productId} {
-      allow read: if sameCompany(resource.data.companyId);
-      allow create: if canWrite()
-        && request.resource.data.companyId == profile().companyId;
-      allow update: if sameCompany(resource.data.companyId)
-        && canWrite()
-        && request.resource.data.companyId == resource.data.companyId;
-      allow delete: if sameCompany(resource.data.companyId) && canDelete();
+    match /companyMembers/{memberId} {
+      allow read, list: if isSuperAdmin() || isAdmin(resource.data.companyId);
+      allow create: if isSuperAdmin() || isAdmin(request.resource.data.companyId);
+      allow update, delete: if isSuperAdmin() || isAdmin(resource.data.companyId);
     }
 
-    // Default deny: add explicit, reviewed rules for any future collection.
-    match /{document=**} {
-      allow read, write: if false;
+    match /companies/{companyId}/members/{userId} {
+      allow get: if isSuperAdmin() ||
+        (isAuth() && request.auth.uid == userId) ||
+        isCompanyOwner(companyId) ||
+        isAdmin(companyId);
+      allow list: if isSuperAdmin() || isCompanyOwner(companyId) || isAdmin(companyId);
+      allow create: if isSuperAdmin() ||
+        (isAuth() && request.auth.uid == companyId && userId == request.auth.uid) ||
+        isAdmin(companyId);
+      allow update, delete: if isSuperAdmin() || isAdmin(companyId);
+    }
+
+    match /auditLogs/{logId} {
+      allow read: if isSuperAdmin() || isMember(resource.data.companyId);
+      allow create: if true;
+    }
+
+    match /deletionRequests/{requestId} {
+      allow create: if isSuperAdmin() ||
+        (isAuth() &&
+          request.resource.data.requesterUid == request.auth.uid &&
+          request.resource.data.status == 'pending' &&
+          request.resource.data.companyId is string &&
+          isOperator(request.resource.data.companyId) &&
+          request.resource.data.collection in ['clients', 'products', 'sales', 'purchases', 'suppliers', 'locations', 'financialTransactions', 'budgets', 'formulas'] &&
+          request.resource.data.documentId is string &&
+          exists(/databases/$(database)/documents/$(request.resource.data.collection)/$(request.resource.data.documentId)) &&
+          get(/databases/$(database)/documents/$(request.resource.data.collection)/$(request.resource.data.documentId)).data.companyId == request.resource.data.companyId);
+
+      allow get: if isSuperAdmin() ||
+        isAdmin(resource.data.companyId) ||
+        isOwner(resource.data.companyId) ||
+        (isAuth() &&
+          resource.data.requesterUid == request.auth.uid &&
+          isOperator(resource.data.companyId));
+
+      allow list: if isSuperAdmin() ||
+        (isAuth() && resource.data.requesterUid == request.auth.uid && isMember(resource.data.companyId)) ||
+        isAdmin(resource.data.companyId) ||
+        isOwner(resource.data.companyId);
+
+      allow update: if isSuperAdmin() || isAdmin(resource.data.companyId) || isOwner(resource.data.companyId);
+      allow delete: if isSuperAdmin() || isOwner(resource.data.companyId);
+    }
+
+    match /companies/{companyId} {
+      allow read: if isSuperAdmin() || isAuth();
+      allow write: if isSuperAdmin() ||
+        (isAuth() && request.auth.uid == companyId);
+    }
+
+    match /assistantChats/{chatId} {
+      allow read: if canReadCollection(resource.data.companyId, 'assistantChats');
+      allow update: if canWriteCollection(resource.data.companyId, 'assistantChats');
+      allow delete: if isSuperAdmin() || (isAdmin(resource.data.companyId));
+
+      allow create: if isSuperAdmin() ||
+        (isAuth() &&
+          request.resource.data.userId == request.auth.uid &&
+          canWriteCollection(request.resource.data.companyId, 'assistantChats'));
+
+      match /messages/{messageId} {
+        allow read: if canReadCollection(get(/databases/$(database)/documents/assistantChats/$(chatId)).data.companyId, 'assistantChats');
+        allow create, update: if canWriteCollection(get(/databases/$(database)/documents/assistantChats/$(chatId)).data.companyId, 'assistantChats');
+        allow delete: if isSuperAdmin() ||
+          isAdmin(get(/databases/$(database)/documents/assistantChats/$(chatId)).data.companyId);
+      }
+    }
+
+    match /{collection}/{docId} {
+      allow read: if collection != 'assistantChats' &&
+        collection != 'users' &&
+        collection != 'companyAccessRequests' &&
+        collection != 'companyMembers' &&
+        collection != 'deletionRequests' &&
+        canReadCollection(resource.data.companyId, collection);
+
+      allow create: if collection != 'assistantChats' &&
+        collection != 'users' &&
+        collection != 'companyAccessRequests' &&
+        collection != 'companyMembers' &&
+        collection != 'deletionRequests' &&
+        request.resource.data.companyId is string &&
+        canWriteCollection(request.resource.data.companyId, collection);
+
+      allow update: if collection != 'assistantChats' &&
+        collection != 'users' &&
+        collection != 'companyAccessRequests' &&
+        collection != 'companyMembers' &&
+        collection != 'deletionRequests' &&
+        resource.data.companyId is string &&
+        request.resource.data.companyId == resource.data.companyId &&
+        canWriteCollection(resource.data.companyId, collection);
+
+      allow delete: if collection != 'assistantChats' &&
+        collection != 'users' &&
+        collection != 'companyAccessRequests' &&
+        collection != 'companyMembers' &&
+        collection != 'deletionRequests' &&
+        (isSuperAdmin() || isAdmin(resource.data.companyId));
+    }
+
+    match /contactMessages/{messageId} {
+      allow create: if request.resource.data.title is string &&
+        request.resource.data.title.size() > 0 &&
+        request.resource.data.title.size() <= 120 &&
+        request.resource.data.email is string &&
+        request.resource.data.email.size() > 3 &&
+        request.resource.data.email.size() <= 254 &&
+        request.resource.data.description is string &&
+        request.resource.data.description.size() > 0 &&
+        request.resource.data.description.size() <= 5000;
+      allow read: if isSuperAdmin();
+      allow update, delete: if isSuperAdmin();
+    }
+
+    match /counters/{companyId} {
+      allow read: if canReadCollection(companyId, 'counters');
+      allow write: if canWriteCollection(companyId, 'counters');
     }
   }
 }
