@@ -60,3 +60,5 @@ GitHub Actions validates the production build, lint and unit tests on this branc
 <!-- CI trigger: fix malformed newline literals -->
 
 <!-- CI trigger: isolated Firebase test environment -->
+
+<!-- CI trigger: Firebase lazy initialization and test isolation -->
