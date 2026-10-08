@@ -13,20 +13,20 @@
     </div>
     <div class="toolbar-row"><ion-searchbar [(ngModel)]="search" (ionInput)="filter()" placeholder="Buscar por nome, descrição ou localização" [debounce]="150"></ion-searchbar><div class="record-count">{{ filtered.length }} registro(s)</div></div>
     <div class="table-card">
-      <div *ngIf="loading" class="state"><ion-spinner></ion-spinner><p>Carregando produtos...</p></div>
-      <div *ngIf="!loading && filtered.length === 0" class="state"><ion-icon name="cube-outline"></ion-icon><h3>Nenhum produto encontrado</h3><p>Cadastre o primeiro produto ou ajuste a busca.</p></div>
-      <div class="table-scroll" *ngIf="!loading && filtered.length">
+      @if (loading) {<div class="state"><ion-spinner></ion-spinner><p>Carregando produtos...</p></div>}
+      @if (!loading && filtered.length === 0) {<div class="state"><ion-icon name="cube-outline"></ion-icon><h3>Nenhum produto encontrado</h3><p>Cadastre o primeiro produto ou ajuste a busca.</p></div>}
+      @if (!loading && filtered.length) {<div class="table-scroll">
         <table>
           <thead><tr><th>Produto</th><th>Preço de custo</th><th>Preço de venda</th><th>Estoque</th><th>Status</th><th class="actions-col">Ações</th></tr></thead>
-          <tbody><tr *ngFor="let product of filtered">
+          <tbody>@for (product of filtered; track product.id) {<tr>
             <td><div class="primary-cell">{{ product.name }}</div><div class="secondary-cell">{{ product.description || product.stock?.location || 'Sem descrição' }}</div></td>
             <td>{{ money(product.costPrice) }}</td><td class="sell-price">{{ money(product.sellPrice) }}</td>
             <td><span class="stock-number" [class.low-stock]="product.stock.current <= product.stock.minimum">{{ product.stock?.current ?? 0 }}</span><div class="secondary-cell">Mínimo: {{ product.stock?.minimum ?? 0 }}</div></td>
             <td><span class="status" [class.inactive]="product.active === false">{{ product.active === false ? 'Inativo' : 'Ativo' }}</span></td>
             <td class="actions-col"><ion-button fill="clear" size="small" aria-label="Editar produto" (click)="openEdit(product)" [disabled]="!auth.canWrite()"><ion-icon name="create-outline"></ion-icon></ion-button><ion-button fill="clear" color="danger" size="small" aria-label="Excluir produto" (click)="remove(product)" [disabled]="!auth.canDelete()"><ion-icon name="trash-outline"></ion-icon></ion-button></td>
-          </tr></tbody>
+          </tr>}</tbody>
         </table>
-      </div>
+      </div>}
     </div>
   </div>
 
