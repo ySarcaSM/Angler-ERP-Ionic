@@ -1,4 +1,12 @@
-export type CompanyRole = 'owner' | 'admin' | 'operator' | 'viewer';
+export type CompanyRole = 'owner' | 'admin' | 'manager' | 'operator' | 'viewer';
+export type OperatorGroup = 'management' | 'financial' | 'budgets';
+
+export interface CompanyMembership {
+  active: boolean;
+  role: CompanyRole;
+  operatorGroup?: OperatorGroup;
+  accessRequestId?: string;
+}
 
 export interface UserProfile {
   uid: string;
@@ -6,6 +14,7 @@ export interface UserProfile {
   displayName?: string;
   companyId: string;
   role: CompanyRole;
+  memberships: Record<string, CompanyMembership>;
 }
 
 export interface ClientRecord {
