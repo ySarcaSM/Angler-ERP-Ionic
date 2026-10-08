@@ -1,0 +1,56 @@
+<ion-header class="page-header">
+  <ion-toolbar>
+    <ion-buttons slot="start"><ion-button routerLink="/home" aria-label="Voltar ao painel"><ion-icon name="arrow-back-outline"></ion-icon></ion-button></ion-buttons>
+    <ion-title>Produtos</ion-title>
+    <ion-buttons slot="end"><ion-button fill="clear" (click)="auth.signOut()"><ion-icon slot="start" name="log-out-outline"></ion-icon>Sair</ion-button></ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content class="page-content">
+  <div class="page-shell">
+    <div class="page-intro">
+      <div><p class="eyebrow">CATÁLOGO E ESTOQUE</p><h1>Produtos</h1><p class="subtitle">Gerencie preços, disponibilidade e localização do estoque.</p></div>
+      <ion-button (click)="openNew()" [disabled]="!auth.canWrite()"><ion-icon slot="start" name="add-outline"></ion-icon>Novo produto</ion-button>
+    </div>
+    <div class="toolbar-row"><ion-searchbar [(ngModel)]="search" (ionInput)="filter()" placeholder="Buscar por nome, descrição ou localização" [debounce]="150"></ion-searchbar><div class="record-count">{{ filtered.length }} registro(s)</div></div>
+    <div class="table-card">
+      <div *ngIf="loading" class="state"><ion-spinner></ion-spinner><p>Carregando produtos...</p></div>
+      <div *ngIf="!loading && filtered.length === 0" class="state"><ion-icon name="cube-outline"></ion-icon><h3>Nenhum produto encontrado</h3><p>Cadastre o primeiro produto ou ajuste a busca.</p></div>
+      <div class="table-scroll" *ngIf="!loading && filtered.length">
+        <table>
+          <thead><tr><th>Produto</th><th>Preço de custo</th><th>Preço de venda</th><th>Estoque</th><th>Status</th><th class="actions-col">Ações</th></tr></thead>
+          <tbody><tr *ngFor="let product of filtered">
+            <td><div class="primary-cell">{{ product.name }}</div><div class="secondary-cell">{{ product.description || product.stock?.location || 'Sem descrição' }}</div></td>
+            <td>{{ money(product.costPrice) }}</td><td class="sell-price">{{ money(product.sellPrice) }}</td>
+            <td><span class="stock-number" [class.low-stock]="product.stock?.current <= product.stock?.minimum">{{ product.stock?.current ?? 0 }}</span><div class="secondary-cell">Mínimo: {{ product.stock?.minimum ?? 0 }}</div></td>
+            <td><span class="status" [class.inactive]="product.active === false">{{ product.active === false ? 'Inativo' : 'Ativo' }}</span></td>
+            <td class="actions-col"><ion-button fill="clear" size="small" aria-label="Editar produto" (click)="openEdit(product)" [disabled]="!auth.canWrite()"><ion-icon name="create-outline"></ion-icon></ion-button><ion-button fill="clear" color="danger" size="small" aria-label="Excluir produto" (click)="remove(product)" [disabled]="!auth.canDelete()"><ion-icon name="trash-outline"></ion-icon></ion-button></td>
+          </tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <ion-modal [isOpen]="isEditorOpen" (didDismiss)="isEditorOpen = false">
+    <ng-template>
+      <ion-header><ion-toolbar><ion-title>{{ editingId ? 'Editar produto' : 'Novo produto' }}</ion-title><ion-buttons slot="end"><ion-button (click)="isEditorOpen = false">Fechar</ion-button></ion-buttons></ion-toolbar></ion-header>
+      <ion-content class="ion-padding">
+        <form (ngSubmit)="save()" class="editor-form">
+          <ion-item><ion-label position="stacked">Nome do produto *</ion-label><ion-input name="name" [(ngModel)]="form.name" required maxlength="160"></ion-input></ion-item>
+          <ion-item><ion-label position="stacked">Descrição</ion-label><ion-textarea name="description" [(ngModel)]="form.description" autoGrow="true"></ion-textarea></ion-item>
+          <div class="form-grid">
+            <ion-item><ion-label position="stacked">Preço de custo (R$)</ion-label><ion-input type="number" name="costPrice" [(ngModel)]="form.costPrice" min="0" step="0.01" required></ion-input></ion-item>
+            <ion-item><ion-label position="stacked">Preço de venda (R$)</ion-label><ion-input type="number" name="sellPrice" [(ngModel)]="form.sellPrice" min="0" step="0.01" required></ion-input></ion-item>
+          </div>
+          <div class="form-grid">
+            <ion-item><ion-label position="stacked">Estoque atual</ion-label><ion-input type="number" name="stockCurrent" [(ngModel)]="form.stock.current" min="0" required></ion-input></ion-item>
+            <ion-item><ion-label position="stacked">Estoque mínimo</ion-label><ion-input type="number" name="stockMinimum" [(ngModel)]="form.stock.minimum" min="0" required></ion-input></ion-item>
+            <ion-item><ion-label position="stacked">Estoque máximo</ion-label><ion-input type="number" name="stockMaximum" [(ngModel)]="form.stock.maximum" min="0" required></ion-input></ion-item>
+          </div>
+          <ion-item><ion-label position="stacked">Localização no estoque</ion-label><ion-input name="location" [(ngModel)]="form.stock.location"></ion-input></ion-item>
+          <ion-item lines="none"><ion-label>Produto ativo</ion-label><ion-toggle name="active" [(ngModel)]="form.active"></ion-toggle></ion-item>
+          <ion-button type="submit" expand="block" [disabled]="saving">{{ saving ? 'Salvando...' : 'Salvar produto' }}</ion-button>
+        </form>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+</ion-content>
