@@ -62,3 +62,5 @@ GitHub Actions validates the production build, lint and unit tests on this branc
 <!-- CI trigger: isolated Firebase test environment -->
 
 <!-- CI trigger: Firebase lazy initialization and test isolation -->
+
+<!-- CI trigger: Firebase environment import fix -->
