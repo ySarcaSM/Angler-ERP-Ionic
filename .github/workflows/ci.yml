@@ -31,4 +31,4 @@ jobs:
         run: npm run lint
 
       - name: Unit tests
-        run: npm test -- --no-watch --no-progress
+        run: npm test -- --no-watch --no-progress --configuration=ci
