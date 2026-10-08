@@ -26,11 +26,9 @@ export class ProductsPage implements OnInit {
   editingId?: string;
   form: ProductForm = emptyProduct();
 
-  constructor(
-    public readonly auth: AuthService,
-    private readonly service: ProductsService,
-    private readonly toastController: ToastController
-  ) {}
+  public readonly auth = inject(AuthService);
+  private readonly service = inject(ProductsService);
+  private readonly toastController = inject(ToastController);
 
   ngOnInit(): void { void this.load(); }
 
