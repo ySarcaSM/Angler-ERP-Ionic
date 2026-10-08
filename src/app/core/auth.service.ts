@@ -19,25 +19,7 @@ export class AuthService {
     onAuthStateChanged(firebaseAuth, async user => {
       this.userSubject.next(user);
       let profile: UserProfile | null = null;
-      if (user) {
-        try {
-          const snapshot = await getDoc(doc(firestore, 'users', user.uid));
-          if (snapshot.exists()) {
-            const data = snapshot.data();
-            if (typeof data['companyId'] === 'string' && data['companyId'].length > 0) {
-              profile = {
-                uid: user.uid,
-                email: user.email ?? undefined,
-                displayName: user.displayName ?? undefined,
-                companyId: data['companyId'],
-                role: this.normalizeRole(data['role'])
-              };
-            }
-          }
-        } catch (error) {
-          console.error('Não foi possível carregar o perfil da empresa.', error);
-        }
-      }
+      if (user) profile = await this.loadProfile(user);
       this.profileSubject.next(profile);
       this.resolveReady();
     });
@@ -51,17 +33,21 @@ export class AuthService {
   ready(): Promise<void> { return this.readyPromise; }
 
   async signIn(email: string, password: string): Promise<void> {
-    await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
-    await this.ready();
-    if (!this.profile?.companyId) {
+    const credential = await signInWithEmailAndPassword(firebaseAuth, email.trim(), password);
+    const profile = await this.loadProfile(credential.user);
+    if (!profile?.companyId) {
       await signOut(firebaseAuth);
       throw new Error('Seu usuário não está associado a uma empresa. Solicite acesso ao administrador.');
     }
+    this.userSubject.next(credential.user);
+    this.profileSubject.next(profile);
     await this.router.navigateByUrl('/home');
   }
 
   async signOut(): Promise<void> {
     await signOut(firebaseAuth);
+    this.userSubject.next(null);
+    this.profileSubject.next(null);
     await this.router.navigateByUrl('/login');
   }
 
@@ -71,6 +57,25 @@ export class AuthService {
 
   canDelete(): boolean {
     return ['owner', 'admin'].includes(this.role);
+  }
+
+  private async loadProfile(user: User): Promise<UserProfile | null> {
+    try {
+      const snapshot = await getDoc(doc(firestore, 'users', user.uid));
+      if (!snapshot.exists()) return null;
+      const data = snapshot.data();
+      if (typeof data['companyId'] !== 'string' || !data['companyId'].length) return null;
+      return {
+        uid: user.uid,
+        email: user.email ?? undefined,
+        displayName: user.displayName ?? undefined,
+        companyId: data['companyId'],
+        role: this.normalizeRole(data['role'])
+      };
+    } catch (error) {
+      console.error('Não foi possível carregar o perfil da empresa.', error);
+      return null;
+    }
   }
 
   private normalizeRole(role: unknown): UserProfile['role'] {
