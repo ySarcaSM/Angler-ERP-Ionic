@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp,
   updateDoc, where
@@ -11,7 +11,7 @@ import { ProductRecord } from '../models/erp.models';
 export class ProductsService {
   private readonly collectionName = 'products';
 
-  constructor(private readonly auth: AuthService) {}
+
 
   async list(): Promise<ProductRecord[]> {
     const companyId = this.requireCompany();
