@@ -4,7 +4,8 @@ import { AuthService } from './auth.service';
 
 @Injectable({ providedIn: 'root' })
 export class PermissionGuard implements CanActivate {
-  private readonly auth = inject(AuthService);\n  private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
 
   async canActivate(route: ActivatedRouteSnapshot): Promise<boolean | UrlTree> {
     await this.auth.ready();
