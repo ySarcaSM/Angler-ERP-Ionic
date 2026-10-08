@@ -10,6 +10,7 @@ import { ClientRecord } from '../models/erp.models';
 @Injectable({ providedIn: 'root' })
 export class ClientsService {
   private readonly collectionName = 'clients';
+  private readonly auth = inject(AuthService);
 
 
 
