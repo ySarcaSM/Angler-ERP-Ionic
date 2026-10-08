@@ -1,7 +1,7 @@
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
 import { Auth, getAuth } from 'firebase/auth';
 import { Firestore, getFirestore } from 'firebase/firestore';
-import { environment } from '../environments/environment';
+import { environment } from '../../environments/environment';
 
 let app: FirebaseApp | undefined;
 let auth: Auth | undefined;
