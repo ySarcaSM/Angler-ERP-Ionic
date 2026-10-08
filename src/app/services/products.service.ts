@@ -3,7 +3,7 @@ import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, serverTimestamp,
   updateDoc, where
 } from 'firebase/firestore';
-import { firestore } from '../core/firebase';
+import { getFirestoreDb } from '../core/firebase';
 import { AuthService } from '../core/auth.service';
 import { ProductRecord } from '../models/erp.models';
 
@@ -17,7 +17,7 @@ export class ProductsService {
   async list(): Promise<ProductRecord[]> {
     const companyId = this.requireCompany();
     this.requireRead();
-    const q = query(collection(firestore, this.collectionName), where('companyId', '==', companyId));
+    const q = query(collection(getFirestoreDb(), this.collectionName), where('companyId', '==', companyId));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(item => ({ id: item.id, ...item.data() } as ProductRecord))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
@@ -32,14 +32,14 @@ export class ProductsService {
     const payload = { ...input, companyId, updatedAt: serverTimestamp() };
 
     if (id) {
-      const ref = doc(firestore, this.collectionName, id);
+      const ref = doc(getFirestoreDb(), this.collectionName, id);
       const current = await getDoc(ref);
       if (!current.exists() || current.data()['companyId'] !== companyId) {
         throw new Error('Produto não encontrado nesta empresa.');
       }
       await updateDoc(ref, payload);
     } else {
-      await addDoc(collection(firestore, this.collectionName), {
+      await addDoc(collection(getFirestoreDb(), this.collectionName), {
         ...payload,
         createdAt: serverTimestamp()
       });
@@ -52,7 +52,7 @@ export class ProductsService {
       throw new Error('Somente proprietários e administradores podem excluir produtos.');
     }
 
-    const ref = doc(firestore, this.collectionName, id);
+    const ref = doc(getFirestoreDb(), this.collectionName, id);
     const current = await getDoc(ref);
     if (!current.exists() || current.data()['companyId'] !== companyId) {
       throw new Error('Produto não encontrado nesta empresa.');
