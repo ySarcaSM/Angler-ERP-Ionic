@@ -21,7 +21,7 @@
           <tbody><tr *ngFor="let product of filtered">
             <td><div class="primary-cell">{{ product.name }}</div><div class="secondary-cell">{{ product.description || product.stock?.location || 'Sem descrição' }}</div></td>
             <td>{{ money(product.costPrice) }}</td><td class="sell-price">{{ money(product.sellPrice) }}</td>
-            <td><span class="stock-number" [class.low-stock]="product.stock?.current <= product.stock?.minimum">{{ product.stock?.current ?? 0 }}</span><div class="secondary-cell">Mínimo: {{ product.stock?.minimum ?? 0 }}</div></td>
+            <td><span class="stock-number" [class.low-stock]="product.stock.current <= product.stock.minimum">{{ product.stock?.current ?? 0 }}</span><div class="secondary-cell">Mínimo: {{ product.stock?.minimum ?? 0 }}</div></td>
             <td><span class="status" [class.inactive]="product.active === false">{{ product.active === false ? 'Inativo' : 'Ativo' }}</span></td>
             <td class="actions-col"><ion-button fill="clear" size="small" aria-label="Editar produto" (click)="openEdit(product)" [disabled]="!auth.canWrite()"><ion-icon name="create-outline"></ion-icon></ion-button><ion-button fill="clear" color="danger" size="small" aria-label="Excluir produto" (click)="remove(product)" [disabled]="!auth.canDelete()"><ion-icon name="trash-outline"></ion-icon></ion-button></td>
           </tr></tbody>
