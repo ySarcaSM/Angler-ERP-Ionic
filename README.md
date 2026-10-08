@@ -53,3 +53,4 @@ Existing collection names are intentionally preserved:
 ## Validation
 
 GitHub Actions validates the production build, lint and unit tests on this branch and pull requests targeting `main`.
+
