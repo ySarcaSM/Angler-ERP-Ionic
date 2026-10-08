@@ -1,0 +1,59 @@
+<ion-header class="page-header">
+  <ion-toolbar>
+    <ion-buttons slot="start"><ion-button routerLink="/home" aria-label="Voltar ao painel"><ion-icon name="arrow-back-outline"></ion-icon></ion-button></ion-buttons>
+    <ion-title>Clientes</ion-title>
+    <ion-buttons slot="end"><ion-button fill="clear" (click)="auth.signOut()"><ion-icon slot="start" name="log-out-outline"></ion-icon>Sair</ion-button></ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="page-content">
+  <div class="page-shell">
+    <div class="page-intro">
+      <div><p class="eyebrow">RELACIONAMENTO</p><h1>Clientes</h1><p class="subtitle">Centralize os dados e mantenha seu relacionamento organizado.</p></div>
+      <ion-button (click)="openNew()" [disabled]="!auth.canWrite()"><ion-icon slot="start" name="add-outline"></ion-icon>Novo cliente</ion-button>
+    </div>
+    <div class="toolbar-row">
+      <ion-searchbar [(ngModel)]="search" (ionInput)="filter()" placeholder="Buscar por nome, documento, e-mail ou telefone" [debounce]="150"></ion-searchbar>
+      <div class="record-count">{{ filtered.length }} registro(s)</div>
+    </div>
+    <div class="table-card">
+      @if (loading) {<div class="state"><ion-spinner></ion-spinner><p>Carregando clientes...</p></div>}
+      @if (!loading && filtered.length === 0) {<div class="state">
+        <ion-icon name="people-outline"></ion-icon><h3>Nenhum cliente encontrado</h3><p>Cadastre o primeiro cliente ou ajuste a busca.</p>
+      </div>}
+      @if (!loading && filtered.length) {<div class="table-scroll">
+        <table>
+          <thead><tr><th>Cliente</th><th>Documento</th><th>Contato</th><th>Status</th><th class="actions-col">Ações</th></tr></thead>
+          <tbody>
+            @for (client of filtered; track client.id) {<tr>
+              <td><div class="primary-cell">{{ client.name }}</div><div class="secondary-cell">{{ client.email || 'Sem e-mail' }}</div></td>
+              <td>{{ client.document || '—' }}</td>
+              <td><div>{{ client.phone || '—' }}</div><div class="secondary-cell">{{ client.contact || '' }}</div></td>
+              <td><span class="status" [class.inactive]="client.active === false">{{ client.active === false ? 'Inativo' : 'Ativo' }}</span></td>
+              <td class="actions-col"><ion-button fill="clear" size="small" aria-label="Editar cliente" (click)="openEdit(client)" [disabled]="!auth.canWrite()"><ion-icon name="create-outline"></ion-icon></ion-button><ion-button fill="clear" color="danger" size="small" aria-label="Excluir cliente" (click)="remove(client)" [disabled]="!auth.canDelete()"><ion-icon name="trash-outline"></ion-icon></ion-button></td>
+            </tr>}
+          </tbody>
+        </table>
+      </div>}
+    </div>
+  </div>
+
+  <ion-modal [isOpen]="isEditorOpen" (didDismiss)="closeEditor()">
+    <ng-template>
+      <ion-header><ion-toolbar><ion-title>{{ editingId ? 'Editar cliente' : 'Novo cliente' }}</ion-title><ion-buttons slot="end"><ion-button (click)="closeEditor()">Fechar</ion-button></ion-buttons></ion-toolbar></ion-header>
+      <ion-content class="ion-padding">
+        <form (ngSubmit)="save()" class="editor-form">
+          <ion-item><ion-label position="stacked">Nome / Razão social *</ion-label><ion-input name="name" [(ngModel)]="form.name" required maxlength="160"></ion-input></ion-item>
+          <ion-item><ion-label position="stacked">CPF / CNPJ</ion-label><ion-input name="document" [(ngModel)]="form.document" maxlength="30"></ion-input></ion-item>
+          <ion-item><ion-label position="stacked">E-mail</ion-label><ion-input name="email" type="email" [(ngModel)]="form.email"></ion-input></ion-item>
+          <ion-item><ion-label position="stacked">Telefone</ion-label><ion-input name="phone" type="tel" [(ngModel)]="form.phone"></ion-input></ion-item>
+          <ion-item><ion-label position="stacked">Pessoa de contato</ion-label><ion-input name="contact" [(ngModel)]="form.contact"></ion-input></ion-item>
+          <ion-item><ion-label position="stacked">Endereço</ion-label><ion-input name="address" [(ngModel)]="form.address"></ion-input></ion-item>
+          <ion-item><ion-label position="stacked">Observações</ion-label><ion-textarea name="notes" [(ngModel)]="form.notes" autoGrow="true"></ion-textarea></ion-item>
+          <ion-item lines="none"><ion-label>Cliente ativo</ion-label><ion-toggle name="active" [(ngModel)]="form.active"></ion-toggle></ion-item>
+          <ion-button type="submit" expand="block" [disabled]="saving">{{ saving ? 'Salvando...' : 'Salvar cliente' }}</ion-button>
+        </form>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+</ion-content>

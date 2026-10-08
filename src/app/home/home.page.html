@@ -1,20 +1,38 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>
-      Blank
-    </ion-title>
+<ion-header>
+  <ion-toolbar class="topbar">
+    <ion-title><span class="brand-dot"><ion-icon name="fish-outline"></ion-icon></span> Angler<span class="brand-accent">ERP</span></ion-title>
+    <ion-buttons slot="end"><ion-button fill="clear" (click)="auth.signOut()"><ion-icon slot="start" name="log-out-outline"></ion-icon>Sair</ion-button></ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Blank</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content class="dashboard">
+  <div class="dashboard-shell">
+    <aside class="welcome-panel">
+      <div>
+        <p class="eyebrow">PAINEL DE CONTROLE</p>
+        <h1>Gestão clara.<br><span>Decisões melhores.</span></h1>
+        <p class="welcome-copy">Bem-vindo{{ auth.profile?.displayName ? ', ' + auth.profile?.displayName : '' }}. Acompanhe os cadastros e mantenha a operação organizada.</p>
+      </div>
+      <div class="welcome-graphic"><ion-icon name="analytics-outline"></ion-icon></div>
+    </aside>
 
-  <div id="container">
-    <strong>Ready to create an app?</strong>
-    <p>Start with Ionic <a target="_blank" rel="noopener noreferrer" href="https://ionicframework.com/docs/components">UI Components</a></p>
+    <div class="section-heading">
+      <div><h2>Áreas de trabalho</h2><p>Acesse rapidamente os principais cadastros do ERP.</p></div>
+      <span class="role-chip">{{ auth.profile?.role || 'usuário' }}{{ auth.operatorGroup ? ' • ' + auth.operatorGroup : '' }}</span>
+    </div>
+
+    <div class="module-grid">
+      @if (auth.canReadCollection('clients')) {<a class="module-card" routerLink="/clientes">
+        <div class="module-icon teal"><ion-icon name="people-outline"></ion-icon></div>
+        <div class="module-copy"><h3>Clientes</h3><p>Dados cadastrais, contatos e relacionamento comercial.</p><span class="card-link">Abrir clientes <ion-icon name="arrow-forward-outline"></ion-icon></span></div>
+      </a>}
+      @if (auth.canReadCollection('products')) {<a class="module-card" routerLink="/produtos">
+        <div class="module-icon blue"><ion-icon name="cube-outline"></ion-icon></div>
+        <div class="module-copy"><h3>Produtos</h3><p>Catálogo, preços e acompanhamento do estoque.</p><span class="card-link">Abrir produtos <ion-icon name="arrow-forward-outline"></ion-icon></span></div>
+      </a>}
+    </div>
+
+    <div class="security-banner"><ion-icon name="shield-checkmark-outline"></ion-icon><div><strong>Dados isolados por empresa</strong><p>O acesso é limitado à empresa vinculada ao seu perfil, ao grupo do operador e validado pelas regras do Firestore.</p></div></div>
+    <footer>AnglerERP <span>•</span> Plataforma de gestão empresarial</footer>
   </div>
 </ion-content>
