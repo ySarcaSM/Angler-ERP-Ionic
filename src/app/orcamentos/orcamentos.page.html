@@ -41,7 +41,7 @@
     <section class="capacity-panel">
       <div class="capacity-heading">
         <div><p class="eyebrow">CAPACIDADE DE CORTE</p><h2>Quantas unidades cabem em um plano</h2><p>O cálculo compara as orientações possíveis e prioriza a que acomoda mais unidades inteiras.</p></div>
-        <div class="capacity-total"><span>Capacidade máxima</span><strong>{{ format(tablePlan.capacity, 0) }}</strong><small>unidades por plano</small></div>
+        <div class="capacity-total"><span>Capacidade máxima</span><strong>{{ format(totalCapacity, 0) }}</strong><small>unidades na largura informada</small></div>
       </div>
       <div class="metric-grid">
         <article class="metric"><span>Por fileira</span><strong>{{ format(tablePlan.piecesPerRow, 0) }}</strong><small>unidades no comprimento</small></article>
@@ -49,7 +49,7 @@
         <article class="metric"><span>Mesa útil</span><strong>262 × {{ format(tablePlan.width, 0) }}</strong><small>cm de área de corte</small></article>
         <article class="metric"><span>Quantidade informada</span><strong>{{ format(quantity, 0) }}</strong><small [class.warning]="!quantityWithinCapacity" [class.success]="quantityWithinCapacity">{{ quantityWithinCapacity ? 'cabe neste plano' : 'acima da capacidade' }}</small></article>
       </div>
-      <div class="formula-line"><span>{{ format(tablePlan.piecesPerRow, 0) }} por fileira</span><b>×</b><span>{{ format(tablePlan.rows, 0) }} fileiras</span><b>=</b><strong>{{ format(tablePlan.capacity, 0) }} unidades</strong></div>
+      <div class="formula-line"><span>{{ format(tablePlan.piecesPerRow, 0) }} por fileira</span><b>×</b><span>{{ format(tablePlan.rows, 0) }} fileiras</span><b>=</b><strong>{{ format(totalCapacity, 0) }} unidades</strong></div>
       <p class="orientation-note">Cada unidade ocupa <strong>{{ format(tablePlan.pieceWidth, 1) }} × {{ format(tablePlan.pieceHeight, 1) }} cm</strong> nesta orientação. @if (tablePlan.rotated) { <span>A rotação de 90° foi escolhida para melhorar o aproveitamento.</span> }</p>
       @if (!canCut) {<div class="validation-note"><ion-icon name="alert-circle-outline"></ion-icon> Informe medidas válidas e uma quantidade maior que zero para calcular o plano.</div>}
       <div class="cut-preview" aria-label="Prévia esquemática do plano de corte">
