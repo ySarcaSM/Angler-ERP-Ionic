@@ -1,2 +1,13 @@
-// For information on how to create your own theme, please refer to:
-// https://ionicframework.com/docs/theming/
+/* Ionic variables aligned to Angler ERP's original dark/gold UI. */
+:root {
+  --ion-color-primary: #d4af37;
+  --ion-color-primary-rgb: 212, 175, 55;
+  --ion-color-primary-contrast: #0a0a0a;
+  --ion-color-primary-contrast-rgb: 10, 10, 10;
+  --ion-color-primary-shade: #bb9a30;
+  --ion-color-primary-tint: #d9b84b;
+  --ion-color-dark: #0a0a0a;
+  --ion-color-dark-rgb: 10, 10, 10;
+  --ion-color-dark-contrast: #ffffff;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+}
