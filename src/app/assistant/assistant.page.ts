@@ -167,7 +167,7 @@ export class AssistantPage implements OnInit {
         'DICAS E LIMITES: se o usuário escrever “262/150”, interprete como plano de 262 cm × 150 cm quando o contexto indicar comprimento útil × largura do material. Informe orientação, capacidade dos corpos, necessidade de cortes laterais e desperdício. A lógica oficial é um cálculo retangular por fileiras/colunas, não um nesting avançado. Não invente margem de costura, bolsos, tampa, alças adicionais nem partes que não estejam nos dados. Se faltar uma variável relevante, declare a hipótese ou pergunte.',
         'A chave de API é enviada diretamente do navegador ao provedor selecionado e não deve ser mencionada nem repetida.',
         context
-      ].join('\\n\\n');
+      ].join('\n\n');
       const history = chat.messages.slice(-16).map(message => ({ role: message.role, content: message.content }));
       const answer = await this.callProvider(this.providerId, this.apiKey.trim(), this.endpoint, this.modelId, [
         { role: 'system', content: system }, ...history
