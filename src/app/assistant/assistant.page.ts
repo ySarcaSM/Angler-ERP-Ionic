@@ -132,6 +132,10 @@ export class AssistantPage implements OnInit {
     } finally { this.loadingModels = false; this.cdr.markForCheck(); }
   }
 
+  handleEnter(event: KeyboardEvent): void {
+    if (!event.shiftKey) { event.preventDefault(); void this.send(); }
+  }
+
   async send(): Promise<void> {
     const prompt = this.draft.trim();
     if (!prompt || this.loading) return;
@@ -188,7 +192,21 @@ export class AssistantPage implements OnInit {
         }))));
       } catch (error) { sections.push('PRODUTOS: não foi possível ler o módulo com as permissões atuais (' + this.message(error) + ').'); }
     }
-    if (wantsCalculation) sections.push('CÁLCULOS: faça contas com precisão. Para embalagens/peças retangulares e chapa retangular, pode calcular áreas teóricas e explicar perdas; área total dividida pela área da chapa é apenas limite superior e não comprova que as peças caibam por encaixe.');
+    if (wantsCalculation) {
+      sections.push('CÁLCULOS: faça contas com precisão. Para embalagens/peças retangulares e chapa retangular, diferencie limite teórico por área de plano de corte otimizado; área dividida não comprova que as peças caibam por encaixe.');
+      const dimensions = prompt.match(/(?:medidas?|dimens(?:ões|oes))?\\s*(\\d+(?:[.,]\\d+)?)\\s*[x×]\\s*(\\d+(?:[.,]\\d+)?)\\s*[x×]\\s*(\\d+(?:[.,]\\d+)?)/i);
+      const plan = prompt.match(/(?:plano|chapa|tecido|material)\\s*(?:de\\s*)?(\\d+(?:[.,]\\d+)?)\\s*[x×/\\-]\\s*(\\d+(?:[.,]\\d+)?)/i);
+      if (dimensions && plan) {
+        const [a, b, d] = dimensions.slice(1).map(value => Number(value.replace(',', '.')));
+        const [width, height] = plan.slice(1).map(value => Number(value.replace(',', '.')));
+        if ([a, b, d, width, height].every(value => Number.isFinite(value) && value > 0)) {
+          const panelArea = 2 * a * b + 2 * b * d + a * d;
+          const sheetArea = width * height;
+          const theoretical = Math.floor(sheetArea / panelArea);
+          sections.push('ESTIMATIVA MATEMÁTICA DETECTADA (unidades iguais): assumindo uma mochila simplificada composta por 2 painéis a×b, 2 laterais b×d e 1 fundo a×d, sem alças, bolsos, tampa, costuras nem margem de corte. Medidas informadas: ' + a + '×' + b + '×' + d + '; plano: ' + width + '×' + height + '. Área estimada de peças por mochila = 2ab + 2bd + ad = ' + panelArea + ' unidades². Área do plano = ' + sheetArea + ' unidades². Limite superior por área = floor(' + sheetArea + '/' + panelArea + ') = ' + theoretical + ' mochilas. Isto é somente um limite teórico por área; o número realmente cortável pode ser menor por causa do encaixe das peças, margens, sentido do tecido e perdas.');
+        }
+      }
+    }
     return sections.length ? 'CONTEXTO DO ERP (dados atuais consultados na sessão):\n' + sections.join('\n\n') : 'Nenhum dado do ERP foi solicitado explicitamente. Se a pergunta depender de clientes/produtos, consulte os serviços correspondentes quando pertinente.';
   }
 
