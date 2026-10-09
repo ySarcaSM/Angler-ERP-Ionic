@@ -180,8 +180,12 @@ export class OrcamentosPage {
       (width <= 262 || height <= 262) && this.tablePlan.capacity > 0;
   }
 
+  get totalCapacity(): number {
+    return this.materialPlans.reduce((total, plan) => total + plan.capacity, 0);
+  }
+
   get quantityWithinCapacity(): boolean {
-    return this.quantity <= this.tablePlan.capacity;
+    return this.quantity <= this.totalCapacity;
   }
 
   get areaPerUnit(): number {
