@@ -54,9 +54,9 @@
       @if (!canCut) {<div class="validation-note"><ion-icon name="alert-circle-outline"></ion-icon> Informe medidas válidas e uma quantidade maior que zero para calcular o plano.</div>}
       <div class="cut-preview" aria-label="Prévia esquemática do plano de corte">
         <div class="cut-table">
-          @for (row of [].constructor(tablePlan.rows > 12 ? 12 : tablePlan.rows); track $index) {
+          @for (row of previewRows; track $index) {
             <div class="cut-row">
-              @for (piece of [].constructor(tablePlan.piecesPerRow > 18 ? 18 : tablePlan.piecesPerRow); track $index) {
+              @for (piece of previewColumns; track $index) {
                 <span class="cut-piece" [style.flex-basis.%]="100 / tablePlan.piecesPerRow"></span>
               }
             </div>
