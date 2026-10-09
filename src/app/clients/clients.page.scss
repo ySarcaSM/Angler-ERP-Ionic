@@ -1,30 +1,30 @@
-.page-content { --background: #0a0a0a; color: #e0e0e0; }
-.page-header ion-toolbar { --background: #111; --color: #e0e0e0; --border-color: #292929; border-bottom: 1px solid #292929; }
+.page-content { --background: #f5f7fa; }
+.page-header ion-toolbar { --background: #fff; --color: #173247; }
 .page-shell { max-width: 1440px; margin: 0 auto; padding: clamp(1rem, 3vw, 2.5rem); }
 .page-intro { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: .5rem 0 1.5rem; }
-.eyebrow { color: #d4af37; font-size: .72rem; letter-spacing: .14em; font-weight: 800; margin: 0 0 .5rem; }
-h1 { color: #f0f0f0; font-size: clamp(1.8rem, 3vw, 2.4rem); font-weight: 800; margin: 0; letter-spacing: -.04em; }
-.subtitle { color: #858585; margin: .5rem 0 0; }
-.page-intro ion-button { --background: linear-gradient(180deg, #f5d17d 0%, #d4af37 48%, #b5882b 100%); --color: #101010; --border-radius: 10px; height: 44px; font-weight: 800; }
+.eyebrow { color: #138879; font-size: .72rem; letter-spacing: .14em; font-weight: 800; margin: 0 0 .5rem; }
+h1 { color: #173247; font-size: clamp(1.8rem, 3vw, 2.4rem); font-weight: 800; margin: 0; letter-spacing: -.04em; }
+.subtitle { color: #738397; margin: .5rem 0 0; }
+.page-intro ion-button { --background: #126e75; --border-radius: 10px; height: 44px; font-weight: 700; }
 .toolbar-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-ion-searchbar { --background: #171717; --color: #e0e0e0; --placeholder-color: #777; --icon-color: #a5a5a5; --box-shadow: none; --border-radius: 10px; padding: 0; max-width: 540px; }
-.record-count { margin-left: auto; color: #858585; white-space: nowrap; font-size: .85rem; }
-.table-card { background: #111; border: 1px solid #2b2b2b; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 24px #0005; }
+ion-searchbar { --background: #fff; --box-shadow: none; --border-radius: 10px; padding: 0; max-width: 540px; }
+.record-count { margin-left: auto; color: #718096; white-space: nowrap; font-size: .85rem; }
+.table-card { background: #fff; border: 1px solid #e4eaf0; border-radius: 14px; overflow: hidden; box-shadow: 0 5px 18px #17324708; }
 .table-scroll { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; min-width: 740px; }
-th { background: #191919; color: #969696; text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; padding: 1rem 1.25rem; font-weight: 800; }
-td { padding: 1rem 1.25rem; border-top: 1px solid #272727; color: #bdbdbd; font-size: .9rem; }
-tbody tr:hover { background: #191919; }
-.primary-cell { color: #eeeeee; font-weight: 700; }
-.secondary-cell { color: #777; font-size: .8rem; margin-top: .25rem; }
-.status { display: inline-block; border-radius: 20px; padding: .3rem .65rem; background: #183025; color: #73c69a; font-size: .75rem; font-weight: 700; border: 1px solid #28513b; }
-.status.inactive { background: #242424; color: #929292; border-color: #373737; }
+th { background: #f9fbfc; color: #718096; text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .07em; padding: 1rem 1.25rem; font-weight: 800; }
+td { padding: 1rem 1.25rem; border-top: 1px solid #edf1f5; color: #33485c; font-size: .9rem; }
+tbody tr:hover { background: #fbfdfd; }
+.primary-cell { color: #173247; font-weight: 700; }
+.secondary-cell { color: #8492a3; font-size: .8rem; margin-top: .25rem; }
+.status { display: inline-block; border-radius: 20px; padding: .3rem .65rem; background: #e6f7f1; color: #13795b; font-size: .75rem; font-weight: 700; }
+.status.inactive { background: #f0f2f5; color: #7a8796; }
 .actions-col { text-align: right; white-space: nowrap; }
-.state { min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #858585; gap: .5rem; }
-.state ion-icon { font-size: 2rem; color: #b89b43; }
-.state h3 { color: #e0e0e0; margin: .3rem 0; }
+.state { min-height: 250px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #7a8a9a; gap: .5rem; }
+.state ion-icon { font-size: 2rem; color: #8ca3b2; }
+.state h3 { color: #30465a; margin: .3rem 0; }
 .state p { margin: 0; }
 .editor-form { display: grid; gap: .7rem; padding-bottom: 1rem; }
-.editor-form ion-item { --background: #171717; --color: #e0e0e0; --border-color: #333; --padding-start: 0; }
-.editor-form ion-button { margin-top: 1rem; --background: #d4af37; --color: #101010; --border-radius: 10px; }
+.editor-form ion-item { --border-color: #e1e8ef; --padding-start: 0; }
+.editor-form ion-button { margin-top: 1rem; --background: #126e75; --border-radius: 10px; }
 @media (max-width: 620px) { .page-intro { align-items: flex-start; flex-direction: column; } .toolbar-row { align-items: stretch; flex-direction: column; } .record-count { margin-left: 0; } }
