@@ -1,0 +1,101 @@
+<ion-header class="page-header">
+  <ion-toolbar>
+    <ion-buttons slot="start"><ion-button routerLink="/home" aria-label="Voltar ao painel"><ion-icon name="arrow-back-outline"></ion-icon></ion-button></ion-buttons>
+    <ion-title>Medição e orçamentos</ion-title>
+    <ion-buttons slot="end"><ion-button fill="clear" (click)="auth.signOut()"><ion-icon slot="start" name="log-out-outline"></ion-icon>Sair</ion-button></ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="page-content">
+  <main class="page-shell">
+    <section class="page-intro">
+      <div><p class="eyebrow">CÁLCULO DE MATERIAIS</p><h1>Medição</h1><p class="subtitle">Informe as medidas da mochila e calcule o melhor aproveitamento do material.</p></div>
+      <ion-button fill="outline" class="reset-button" (click)="reset()"><ion-icon slot="start" name="refresh-outline"></ion-icon>Restaurar padrão</ion-button>
+    </section>
+
+    <section class="measurement-card">
+      <div class="card-heading">
+        <div class="profile-icon"><ion-icon name="cube-outline"></ion-icon></div>
+        <div><h2>Mochila</h2><p>Perfil para mochila estruturada. Ajuste as medidas para estimar o corte e os acessórios.</p></div>
+      </div>
+      <div class="form-grid">
+        <label class="field"><span>Altura (cm)</span><ion-input type="number" min="0" inputmode="decimal" [value]="form.height" (ionInput)="updateNumber('height', $any($event).detail.value)"></ion-input></label>
+        <label class="field"><span>Largura (cm)</span><ion-input type="number" min="0" inputmode="decimal" [value]="form.width" (ionInput)="updateNumber('width', $any($event).detail.value)"></ion-input></label>
+        <label class="field"><span>Comprimento (cm)</span><ion-input type="number" min="0" inputmode="decimal" [value]="form.length" (ionInput)="updateNumber('length', $any($event).detail.value)"></ion-input></label>
+        <label class="field"><span>Quantidade</span><ion-input type="number" min="1" step="1" inputmode="numeric" [value]="form.quantity" (ionInput)="updateNumber('quantity', $any($event).detail.value)"></ion-input></label>
+        <label class="field"><span>Largura do material (cm)</span><ion-input type="number" min="1" inputmode="decimal" [value]="form.materialWidth" (ionInput)="updateNumber('materialWidth', $any($event).detail.value)"></ion-input></label>
+        <label class="field"><span>Desperdício (%)</span><ion-input type="number" min="0" inputmode="decimal" [value]="form.waste" (ionInput)="updateNumber('waste', $any($event).detail.value)"></ion-input></label>
+        <label class="field"><span>Ajuste da sanfona lateral (cm)</span><ion-input type="number" min="0" step="0.1" inputmode="decimal" [value]="form.accordionWidth" (ionInput)="updateNumber('accordionWidth', $any($event).detail.value)"></ion-input><small>Use 0 para não incluir sanfona.</small></label>
+        <label class="field"><span>Acabamento</span><ion-select interface="popover" [value]="form.accessoryType" (ionChange)="form.accessoryType = $event.detail.value"><ion-select-option value="cord">Cordão</ion-select-option><ion-select-option value="handle">Alça</ion-select-option></ion-select></label>
+        @if (form.accessoryType === 'handle') {
+          <div class="accessory-note"><strong>Alça automática:</strong> {{ format(handleLengthPerUnit, 1) }} cm por alça <span>Referência de 35 cm para altura de 30 cm, ajustada proporcionalmente.</span></div>
+          <label class="field"><span>Quantidade de alças</span><ion-select interface="popover" [value]="form.handleQuantity" (ionChange)="form.handleQuantity = +$event.detail.value"><ion-select-option [value]="0">0 alças</ion-select-option><ion-select-option [value]="1">1 alça</ion-select-option><ion-select-option [value]="2">2 alças</ion-select-option></ion-select></label>
+        } @else {
+          <div class="accessory-note"><strong>Cordão automático:</strong> {{ format(cordLengthPerUnit, 1) }} cm por cordão <span>Referência de 60 cm para altura de 30 cm, ajustada proporcionalmente.</span></div>
+          <label class="field"><span>Quantidade de cordões</span><ion-select interface="popover" [value]="form.cordQuantity" (ionChange)="form.cordQuantity = +$event.detail.value"><ion-select-option [value]="0">0 cordões</ion-select-option><ion-select-option [value]="1">1 cordão</ion-select-option><ion-select-option [value]="2">2 cordões</ion-select-option></ion-select></label>
+        }
+      </div>
+      <div class="card-actions"><ion-button (click)="budgetOpen = true" [disabled]="!canCut"><ion-icon slot="start" name="cash-outline"></ion-icon>Orçamento rápido</ion-button><span>Valores e capacidade são atualizados automaticamente.</span></div>
+    </section>
+
+    <section class="capacity-panel">
+      <div class="capacity-heading">
+        <div><p class="eyebrow">CAPACIDADE DE CORTE</p><h2>Quantas unidades cabem em um plano</h2><p>O cálculo compara as orientações possíveis e prioriza a que acomoda mais unidades inteiras.</p></div>
+        <div class="capacity-total"><span>Capacidade máxima</span><strong>{{ format(tablePlan.capacity, 0) }}</strong><small>unidades por plano</small></div>
+      </div>
+      <div class="metric-grid">
+        <article class="metric"><span>Por fileira</span><strong>{{ format(tablePlan.piecesPerRow, 0) }}</strong><small>unidades no comprimento</small></article>
+        <article class="metric"><span>Fileiras</span><strong>{{ format(tablePlan.rows, 0) }}</strong><small>na largura útil</small></article>
+        <article class="metric"><span>Mesa útil</span><strong>262 × {{ format(tablePlan.width, 0) }}</strong><small>cm de área de corte</small></article>
+        <article class="metric"><span>Quantidade informada</span><strong>{{ format(quantity, 0) }}</strong><small [class.warning]="!quantityWithinCapacity" [class.success]="quantityWithinCapacity">{{ quantityWithinCapacity ? 'cabe neste plano' : 'acima da capacidade' }}</small></article>
+      </div>
+      <div class="formula-line"><span>{{ format(tablePlan.piecesPerRow, 0) }} por fileira</span><b>×</b><span>{{ format(tablePlan.rows, 0) }} fileiras</span><b>=</b><strong>{{ format(tablePlan.capacity, 0) }} unidades</strong></div>
+      <p class="orientation-note">Cada unidade ocupa <strong>{{ format(tablePlan.pieceWidth, 1) }} × {{ format(tablePlan.pieceHeight, 1) }} cm</strong> nesta orientação. @if (tablePlan.rotated) { <span>A rotação de 90° foi escolhida para melhorar o aproveitamento.</span> }</p>
+      @if (!canCut) {<div class="validation-note"><ion-icon name="alert-circle-outline"></ion-icon> Informe medidas válidas e uma quantidade maior que zero para calcular o plano.</div>}
+      <div class="cut-preview" aria-label="Prévia esquemática do plano de corte">
+        <div class="cut-table">
+          @for (row of [].constructor(tablePlan.rows > 12 ? 12 : tablePlan.rows); track $index) {
+            <div class="cut-row">
+              @for (piece of [].constructor(tablePlan.piecesPerRow > 18 ? 18 : tablePlan.piecesPerRow); track $index) {
+                <span class="cut-piece" [style.flex-basis.%]="100 / tablePlan.piecesPerRow"></span>
+              }
+            </div>
+          }
+        </div>
+        <p>Prévia esquemática da mesa de 300 cm, considerando 19 cm de margem em cada lateral. A visualização limita o número de peças desenhadas em telas pequenas.</p>
+      </div>
+    </section>
+
+    <section class="summary-grid">
+      <article class="summary-card"><div class="summary-icon"><ion-icon name="layers-outline"></ion-icon></div><span>Área estimada por unidade</span><strong>{{ format(areaPerUnit, 3) }} m²</strong><small>Inclui {{ format(form.waste, 1) }}% de desperdício.</small></article>
+      <article class="summary-card"><div class="summary-icon"><ion-icon name="resize-outline"></ion-icon></div><span>Área estimada total</span><strong>{{ format(totalArea, 2) }} m²</strong><small>Para {{ format(quantity, 0) }} unidade(s).</small></article>
+      <article class="summary-card"><div class="summary-icon"><ion-icon name="albums-outline"></ion-icon></div><span>Planos de corte</span><strong>{{ materialPlans.length }}</strong><small>Segmentos de material considerados.</small></article>
+      <article class="summary-card"><div class="summary-icon"><ion-icon name="git-compare-outline"></ion-icon></div><span>Comprimento por plano</span><strong>300 cm</strong><small>262 cm úteis após as margens.</small></article>
+    </section>
+  </main>
+</ion-content>
+
+<ion-modal [isOpen]="budgetOpen" (didDismiss)="budgetOpen = false" class="budget-modal">
+  <ng-template>
+    <ion-header><ion-toolbar><ion-title>Orçamento rápido</ion-title><ion-buttons slot="end"><ion-button (click)="budgetOpen = false">Fechar</ion-button></ion-buttons></ion-toolbar></ion-header>
+    <ion-content class="ion-padding">
+      <p class="modal-description">Informe os custos para estimar o custo de produção, o preço total e o lucro.</p>
+      <div class="modal-form">
+        <label class="field"><span>Custo do material por metro (R$)</span><ion-input type="number" min="0" step="0.01" [value]="budget.materialCostPerMeter" (ionInput)="updateBudget('materialCostPerMeter', $any($event).detail.value)"></ion-input></label>
+        <label class="field"><span>Custo dos acessórios por metro (R$)</span><ion-input type="number" min="0" step="0.01" [value]="budget.accessoryCostPerMeter" (ionInput)="updateBudget('accessoryCostPerMeter', $any($event).detail.value)"></ion-input></label>
+        <label class="field"><span>Mão de obra por unidade (R$)</span><ion-input type="number" min="0" step="0.01" [value]="budget.laborCostPerUnit" (ionInput)="updateBudget('laborCostPerUnit', $any($event).detail.value)"></ion-input></label>
+        <label class="field"><span>Preço de venda por unidade (R$)</span><ion-input type="number" min="0" step="0.01" [value]="budget.unitPrice" (ionInput)="updateBudget('unitPrice', $any($event).detail.value)"></ion-input></label>
+      </div>
+      <div class="budget-results">
+        <div><span>Material estimado</span><strong>{{ money(budgetResult.material) }}</strong></div>
+        <div><span>Acessórios estimados</span><strong>{{ money(budgetResult.accessories) }}</strong></div>
+        <div><span>Mão de obra</span><strong>{{ money(budgetResult.labor) }}</strong></div>
+        <div><span>Custo total de produção</span><strong>{{ money(budgetResult.productionTotal) }}</strong></div>
+        <div><span>Custo por unidade</span><strong>{{ money(budgetResult.productionPerUnit) }}</strong></div>
+        <div><span>Valor total de venda</span><strong>{{ money(budgetResult.revenue) }}</strong></div>
+        <div class="profit-row"><span>Lucro estimado</span><strong>{{ money(budgetResult.profitTotal) }}</strong></div>
+      </div>
+      <ion-button expand="block" (click)="budgetOpen = false">Concluir</ion-button>
+    </ion-content>
+  </ng-template>
+</ion-modal>
