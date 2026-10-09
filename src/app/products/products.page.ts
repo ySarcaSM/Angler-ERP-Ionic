@@ -21,6 +21,7 @@ export class ProductsPage implements OnInit {
   filtered: ProductRecord[] = [];
   search = '';
   loading = true;
+  loadError = '';
   saving = false;
   isEditorOpen = false;
   editingId?: string;
@@ -34,8 +35,9 @@ export class ProductsPage implements OnInit {
 
   async load(): Promise<void> {
     this.loading = true;
+    this.loadError = '';
     try { this.products = await this.service.list(); this.filter(); }
-    catch (error) { await this.toast(this.message(error)); }
+    catch (error) { this.loadError = this.message(error); await this.toast(this.loadError); }
     finally { this.loading = false; }
   }
 
