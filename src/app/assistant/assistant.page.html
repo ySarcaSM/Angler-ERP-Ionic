@@ -52,7 +52,7 @@
             <ion-button (click)="findFirstWorking()" [disabled]="testing || loadingModels"><ion-icon slot="start" name="flash-outline"></ion-icon>Testar primeiro modelo funcional</ion-button>
           </div>
           @if (status) { <p class="connection-status" role="status">{{ status }}</p> }
-          <p class="privacy-note"><ion-icon name="shield-checkmark-outline"></ion-icon> A chave fica apenas na memória desta página e é enviada diretamente ao provedor escolhido. Não é gravada no Firebase nem no histórico local. Use apenas chaves suas e evite compartilhamento de tela.</p>
+          <p class="privacy-note"><ion-icon name="shield-checkmark-outline"></ion-icon> A chave fica apenas na memória desta página e é enviada diretamente ao provedor escolhido. Não é gravada no Firebase nem no histórico local. Quando necessário, dados de clientes/produtos usados na resposta também são enviados ao provedor de IA escolhido. Use apenas chaves suas e evite compartilhamento de tela.</p>
         </section>
       }
 
