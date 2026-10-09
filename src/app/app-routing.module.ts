@@ -18,6 +18,12 @@ const routes: Routes = [
     data: { collection: 'products' },
     loadChildren: () => import('./products/products.module').then(m => m.ProductsPageModule)
   },
+  {
+    path: 'orcamentos',
+    canActivate: [AuthGuard, PermissionGuard],
+    data: { collection: 'budgets' },
+    loadChildren: () => import('./orcamentos/orcamentos.module').then(m => m.OrcamentosPageModule)
+  },
   { path: '', redirectTo: 'home', pathMatch: 'full' },
   { path: '**', redirectTo: 'home' }
 ];
