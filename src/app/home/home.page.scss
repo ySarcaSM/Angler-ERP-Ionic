@@ -1,31 +1,32 @@
-.dashboard { --background: #0a0a0a; color: #e0e0e0; }
-.topbar { --background: #111; --color: #e0e0e0; --border-color: #292929; border-bottom: 1px solid #292929; }
-.topbar ion-title { font-weight: 800; letter-spacing: -.04em; }
-.brand-dot { display: inline-grid; place-items: center; vertical-align: middle; width: 30px; height: 30px; border-radius: 9px; margin-right: .4rem; background: #292313; color: #d4af37; }
-.brand-accent { color: #d4af37; }
+.dashboard { --background: #f5f7fa; }
+.topbar { --background: #fff; --color: #173247; }
+ion-title { font-weight: 800; letter-spacing: -.04em; }
+.brand-dot { display: inline-grid; place-items: center; vertical-align: middle; width: 30px; height: 30px; border-radius: 9px; margin-right: .4rem; background: #d9f5ef; color: #126e75; }
+.brand-accent { color: #138879; }
 .dashboard-shell { max-width: 1400px; margin: 0 auto; padding: clamp(1rem, 4vw, 3rem); }
-.welcome-panel { min-height: 260px; display: flex; align-items: center; justify-content: space-between; gap: 2rem; border: 1px solid #3a3220; border-radius: 18px; padding: clamp(1.5rem, 4vw, 3rem); color: #f1f1f1; background: radial-gradient(ellipse at 85% 30%, #332a13 0, transparent 40%), linear-gradient(120deg, #151515, #0d0d0d); overflow: hidden; position: relative; }
-.eyebrow { color: #d4af37; letter-spacing: .15em; font-size: .72rem; font-weight: 800; margin: 0 0 1rem; }
-h1 { font-size: clamp(2rem, 4vw, 3.5rem); letter-spacing: -.06em; line-height: 1.06; font-weight: 800; margin: 0; color: #f2f2f2; }
-h1 span { color: #d4af37; }
-.welcome-copy { max-width: 490px; color: #a6a6a6; line-height: 1.7; margin: 1rem 0 0; }
-.welcome-graphic { width: 180px; height: 180px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: #d4af3709; border: 1px solid #d4af3730; color: #d4af37; font-size: 6rem; margin-right: 3%; }
+.welcome-panel { min-height: 260px; display: flex; align-items: center; justify-content: space-between; gap: 2rem; border-radius: 22px; padding: clamp(1.5rem, 4vw, 3rem); color: #fff; background: linear-gradient(120deg, #123047, #176a70); overflow: hidden; position: relative; }
+.eyebrow { color: #67d8c7; letter-spacing: .15em; font-size: .72rem; font-weight: 800; margin: 0 0 1rem; }
+h1 { font-size: clamp(2rem, 4vw, 3.5rem); letter-spacing: -.06em; line-height: 1.06; font-weight: 800; margin: 0; }
+h1 span { color: #6fe0d0; }
+.welcome-copy { max-width: 490px; color: #d1e4eb; line-height: 1.7; margin: 1rem 0 0; }
+.welcome-graphic { width: 180px; height: 180px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: #ffffff0e; border: 1px solid #ffffff24; color: #74dccc; font-size: 6rem; margin-right: 3%; }
 .section-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin: 2.5rem 0 1.25rem; }
-.section-heading h2 { color: #e8e8e8; font-size: 1.3rem; font-weight: 800; margin: 0; }
-.section-heading p { color: #858585; margin: .4rem 0 0; }
-.role-chip { border: 1px solid #343434; border-radius: 20px; padding: .45rem .8rem; background: #141414; color: #c0c0c0; text-transform: capitalize; font-size: .8rem; font-weight: 700; }
+.section-heading h2 { color: #173247; font-size: 1.3rem; font-weight: 800; margin: 0; }
+.section-heading p { color: #7b8999; margin: .4rem 0 0; }
+.role-chip { border: 1px solid #dce7ec; border-radius: 20px; padding: .45rem .8rem; background: #fff; color: #5d7180; text-transform: capitalize; font-size: .8rem; font-weight: 700; }
 .module-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.2rem; }
-.module-card { display: flex; align-items: flex-start; gap: 1.25rem; text-decoration: none; background: linear-gradient(145deg, #151515, #101010); border: 1px solid #2d2d2d; border-radius: 15px; padding: 1.5rem; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
-.module-card:hover { transform: translateY(-3px); border-color: #7a6529; box-shadow: 0 12px 32px #0008; }
-.module-icon { display: grid; place-items: center; flex: 0 0 54px; width: 54px; height: 54px; border-radius: 13px; font-size: 1.6rem; background: #2b2412; color: #d4af37; }
-.module-icon.teal, .module-icon.blue { background: #2b2412; color: #d4af37; }
-.module-copy h3 { color: #ededed; font-size: 1.1rem; font-weight: 800; margin: .1rem 0 .5rem; }
-.module-copy p { color: #929292; line-height: 1.6; margin: 0 0 1rem; }
-.card-link { display: inline-flex; align-items: center; gap: .5rem; color: #d4af37; font-size: .85rem; font-weight: 800; }
-.security-banner { display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.25rem; margin-top: 1.5rem; border: 1px solid #3b3220; background: #17140d; border-radius: 13px; color: #d4af37; }
+.module-card { display: flex; align-items: flex-start; gap: 1.25rem; text-decoration: none; background: #fff; border: 1px solid #e3eaf0; border-radius: 16px; padding: 1.5rem; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.module-card:hover { transform: translateY(-3px); border-color: #b9dcd7; box-shadow: 0 12px 32px #1732470d; }
+.module-icon { display: grid; place-items: center; flex: 0 0 54px; width: 54px; height: 54px; border-radius: 15px; font-size: 1.6rem; }
+.module-icon.teal { background: #e0f7f2; color: #118677; }
+.module-icon.blue { background: #e6efff; color: #3565bb; }
+.module-copy h3 { color: #173247; font-size: 1.1rem; font-weight: 800; margin: .1rem 0 .5rem; }
+.module-copy p { color: #718096; line-height: 1.6; margin: 0 0 1rem; }
+.card-link { display: inline-flex; align-items: center; gap: .5rem; color: #137c76; font-size: .85rem; font-weight: 800; }
+.security-banner { display: flex; align-items: center; gap: 1rem; padding: 1.1rem 1.25rem; margin-top: 1.5rem; border: 1px solid #d9ebe7; background: #f0faf7; border-radius: 14px; color: #167b70; }
 .security-banner > ion-icon { font-size: 1.6rem; flex: 0 0 auto; }
-.security-banner strong { color: #e6cf80; }
-.security-banner p { margin: .3rem 0 0; color: #99907a; font-size: .88rem; }
-footer { text-align: center; color: #666; font-size: .8rem; margin: 2.5rem 0 0; }
-footer span { padding: 0 .35rem; color: #d4af37; }
+.security-banner strong { color: #18584f; }
+.security-banner p { margin: .3rem 0 0; color: #64877f; font-size: .88rem; }
+footer { text-align: center; color: #9aa6b2; font-size: .8rem; margin: 2.5rem 0 0; }
+footer span { padding: 0 .35rem; }
 @media (max-width: 760px) { .welcome-graphic { display: none; } .module-grid { grid-template-columns: 1fr; } .section-heading { align-items: flex-start; } }
