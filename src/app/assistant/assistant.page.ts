@@ -152,11 +152,22 @@ export class AssistantPage implements OnInit {
       const context = await this.buildBusinessContext(prompt);
       const system = [
         'Você é o assistente de IA do AnglerERP. Responda em português brasileiro, com clareza e objetividade.',
-        'Use os dados do contexto empresarial abaixo para responder perguntas sobre clientes e produtos. Não invente registros nem campos ausentes. Respeite os dados da empresa da sessão.',
-        'Você pode fazer cálculos matemáticos. Mostre premissas, fórmula e resultado. Para corte/encaixe de peças, diferencie limite teórico por área de um plano de corte realmente otimizado; nunca prometa encaixe físico exato sem um algoritmo de nesting.',
+        'Use os dados do contexto empresarial abaixo para responder perguntas sobre clientes e produtos. Não invente dados ausentes. Respeite os dados e as permissões da empresa da sessão.',
+        'Faça cálculos com as fórmulas oficiais do Angler ERP abaixo. Sempre informe premissas, fórmula, substituição dos valores, resultado e limitações. Não substitua uma fórmula oficial por aproximação de área sem avisar.',
+        'FÓRMULAS OFICIAIS DO MÓDULO DE MEDIÇÃO/ORÇAMENTO (src/pages/budgets/ProfileGroupPage.jsx):',
+        'VARIÁVEIS: H = altura do produto (cm); W = largura (cm); L = comprimento/profundidade (cm); S = largura de cada sanfona lateral (cm, 0 se não houver); Q = quantidade; D = desperdício percentual; MW = largura do material (cm). Todas as dimensões devem usar a mesma unidade; o módulo espera cm.',
+        'ÁREA DE MATERIAL: bodyArea = H × (W + L + 2S), em cm². areaPorUnidade_m2 = (bodyArea / 10000) × (1 + D/100). areaTotal_m2 = areaPorUnidade_m2 × Q. Use esta fórmula para estimativa de área e desperdício, não para afirmar encaixe físico.',
+        'PLANO FÍSICO: mesa nominal = 300 cm; sobra lateral = 19 cm de cada lado; comprimento útil U = 300 − 2×19 = 262 cm. Largura útil V = min(max(MW, 0), 150) cm. Para cada orientação, G = largura da peça principal + 2S; unidades por fileira = floor(U/G); fileiras = floor(V/altura da peça); capacidade = unidades por fileira × fileiras. Sempre arredonde cada eixo para baixo. Sem sanfona (S=0), teste orientação normal (W por H) e rotação 90° (H por W), escolhendo a maior capacidade; em empate, prefira menor soma das sobras. Com sanfona, o módulo não testa rotação. Nunca use floor(U×V/área da peça) como substituto da capacidade física por fileiras e colunas.',
+        'SANFONAS: no perfil de mochila, S>0 significa 1 corpo + 2 sanfonas por unidade. Quantidade de sanfonas = 2×Q. Cada sanfona mede S×H; areaTotalSanfonas = 2×Q×S×H cm². Para acomodar o conjunto, G = largura da peça principal + 2S.',
+        'LATERAIS: o módulo calcula as laterais separadamente: peça lateral com largura L, altura H e quantidade 2×Q. Com U=262 cm, peçasPorFileira = floor(U/L); fileirasNecessarias = ceil((2×Q)/peçasPorFileira); comprimentoDeCorte_cm = fileirasNecessarias×H. O resultado de capacidade do corpo principal não significa, sozinho, que há laterais suficientes; explique que corpos e laterais são cortes separados.',
+        'MATERIAL LINEAR: fatorDesperdicio = 1 + D/100. O código estima comprimento linear total = numeroDePlanos × 300 × fatorDesperdicio, em cm; metros = comprimento_cm/100. Os planos são segmentados em larguras de até 150 cm e contam quando têm capacidade válida. Evite aplicar desperdício duas vezes ao mesmo valor.',
+        'ACESSÓRIOS: referências do sistema para altura de 30 cm: 35 cm por alça e 60 cm por cordão. escala = H/30. comprimentoPorAlça_cm = 35×(H/30); comprimentoPorCordão_cm = 60×(H/30). Comprimento de acessórios por unidade = quantidadeDeAlças×comprimentoPorAlça ou quantidadeDeCordões×comprimentoPorCordão. Total em metros = comprimentoPorUnidade_cm×Q/100. São referências proporcionais, não medidas universais para todo modelo.',
+        'ORÇAMENTO RÁPIDO: custoMaterial = (materialLinear_cm/100)×custoMaterialPorMetro. custoAcessorios = (metrosDeAlças + metrosDeCordões)×custoAcessorioPorMetro. custoMaoDeObra = Q×custoMaoDeObraPorUnidade. custoProducaoTotal = custoMaterial + custoAcessorios + custoMaoDeObra. custoPorUnidade = custoProducaoTotal/Q, se Q>0. valorVendaTotal = Q×precoVendaUnitario. lucroPorUnidade = precoVendaUnitario − custoPorUnidade. resultadoTotal = valorVendaTotal − custoProducaoTotal. Se pedirem margem sobre venda: lucroPorUnidade/precoVendaUnitario×100, quando o preço for maior que zero; não confundir margem com markup.',
+        'QUAL CÁLCULO USAR: consumo de material/desperdício → fórmula de área. Quantas unidades cabem no plano → U=262, V até 150, floor por eixo e comparação de orientações permitidas; depois conferir corte separado das laterais. Mochila com sanfona → acrescentar 2S no comprimento do conjunto e contar 2 sanfonas por unidade. Alças/cordões → usar escala H/30. Custo/lucro → fórmulas de orçamento rápido e valores de custo/venda informados. Sobras → U − unidadesPorFileira×G e V − fileiras×alturaDaPeça.',
+        'DICAS E LIMITES: se o usuário escrever “262/150”, interprete como plano de 262 cm × 150 cm quando o contexto indicar comprimento útil × largura do material. Informe orientação, capacidade dos corpos, necessidade de cortes laterais e desperdício. A lógica oficial é um cálculo retangular por fileiras/colunas, não um nesting avançado. Não invente margem de costura, bolsos, tampa, alças adicionais nem partes que não estejam nos dados. Se faltar uma variável relevante, declare a hipótese ou pergunte.',
         'A chave de API é enviada diretamente do navegador ao provedor selecionado e não deve ser mencionada nem repetida.',
         context
-      ].join('\n\n');
+      ].join('\\n\\n');
       const history = chat.messages.slice(-16).map(message => ({ role: message.role, content: message.content }));
       const answer = await this.callProvider(this.providerId, this.apiKey.trim(), this.endpoint, this.modelId, [
         { role: 'system', content: system }, ...history
@@ -194,19 +205,7 @@ export class AssistantPage implements OnInit {
       } catch (error) { sections.push('PRODUTOS: não foi possível ler o módulo com as permissões atuais (' + this.message(error) + ').'); }
     }
     if (wantsCalculation) {
-      sections.push('CÁLCULOS: faça contas com precisão. Para embalagens/peças retangulares e chapa retangular, diferencie limite teórico por área de plano de corte otimizado; área dividida não comprova que as peças caibam por encaixe.');
-      const dimensions = prompt.match(/(?:medidas?|dimens(?:ões|oes))?\s*(\d+(?:[.,]\d+)?)\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*[x×]\s*(\d+(?:[.,]\d+)?)/i);
-      const plan = prompt.match(/(?:plano|chapa|tecido|material)\s*(?:de\s*)?(\d+(?:[.,]\d+)?)\s*[x×/-]\s*(\d+(?:[.,]\d+)?)/i);
-      if (dimensions && plan) {
-        const [a, b, d] = dimensions.slice(1).map(value => Number(value.replace(',', '.')));
-        const [width, height] = plan.slice(1).map(value => Number(value.replace(',', '.')));
-        if ([a, b, d, width, height].every(value => Number.isFinite(value) && value > 0)) {
-          const panelArea = 2 * a * b + 2 * b * d + a * d;
-          const sheetArea = width * height;
-          const theoretical = Math.floor(sheetArea / panelArea);
-          sections.push('ESTIMATIVA MATEMÁTICA DETECTADA (unidades iguais): assumindo uma mochila simplificada composta por 2 painéis a×b, 2 laterais b×d e 1 fundo a×d, sem alças, bolsos, tampa, costuras nem margem de corte. Medidas informadas: ' + a + '×' + b + '×' + d + '; plano: ' + width + '×' + height + '. Área estimada de peças por mochila = 2ab + 2bd + ad = ' + panelArea + ' unidades². Área do plano = ' + sheetArea + ' unidades². Limite superior por área = floor(' + sheetArea + '/' + panelArea + ') = ' + theoretical + ' mochilas. Isto é somente um limite teórico por área; o número realmente cortável pode ser menor por causa do encaixe das peças, margens, sentido do tecido e perdas.');
-        }
-      }
+      sections.push('REGRAS OFICIAIS DE MEDIÇÃO DO ANGLER ERP: consulte as fórmulas completas do prompt de sistema. O plano padrão usa 262 cm de comprimento útil (mesa de 300 cm menos 19 cm em cada lateral) e até 150 cm de largura. Calcule a capacidade por fileiras e colunas inteiras, compare as duas orientações quando não houver sanfona e calcule as laterais separadamente. A aproximação por área não é a fórmula oficial de capacidade física.');
     }
     return sections.length ? 'CONTEXTO DO ERP (dados atuais consultados na sessão):\n' + sections.join('\n\n') : 'Nenhum dado do ERP foi solicitado explicitamente. Se a pergunta depender de clientes/produtos, consulte os serviços correspondentes quando pertinente.';
   }
