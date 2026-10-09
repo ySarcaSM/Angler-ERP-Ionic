@@ -73,7 +73,7 @@
       </section>
 
       <div class="composer">
-        <textarea [(ngModel)]="draft" (keydown.enter)="!$any($event).shiftKey && ($event.preventDefault(), send())" placeholder="Pergunte sobre clientes, produtos ou faça um cálculo..." rows="2" [disabled]="loading"></textarea>
+        <textarea [(ngModel)]="draft" (keydown.enter)="handleEnter($event)" placeholder="Pergunte sobre clientes, produtos ou faça um cálculo..." rows="2" [disabled]="loading"></textarea>
         <div class="composer-footer"><span>Enter para enviar · Shift+Enter para nova linha</span><ion-button (click)="send()" [disabled]="loading || !draft.trim()"><ion-icon slot="start" name="send-outline"></ion-icon>Enviar</ion-button></div>
       </div>
     </main>
