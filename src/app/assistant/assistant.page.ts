@@ -132,8 +132,9 @@ export class AssistantPage implements OnInit {
     } finally { this.loadingModels = false; this.cdr.markForCheck(); }
   }
 
-  handleEnter(event: KeyboardEvent): void {
-    if (!event.shiftKey) { event.preventDefault(); void this.send(); }
+  handleEnter(event: Event): void {
+    const keyboardEvent = event as KeyboardEvent;
+    if (!keyboardEvent.shiftKey) { keyboardEvent.preventDefault(); void this.send(); }
   }
 
   async send(): Promise<void> {
