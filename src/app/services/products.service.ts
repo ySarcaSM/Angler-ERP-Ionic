@@ -12,14 +12,36 @@ export class ProductsService {
   private readonly collectionName = 'products';
   private readonly auth = inject(AuthService);
 
-
-
   async list(): Promise<ProductRecord[]> {
     const companyId = this.requireCompany();
     this.requireRead();
     const q = query(collection(getFirestoreDb(), this.collectionName), where('companyId', '==', companyId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(item => ({ id: item.id, ...item.data() } as ProductRecord))
+
+    return snapshot.docs
+      .map(item => {
+        const data = item.data();
+        const rawStock = data['stock'] && typeof data['stock'] === 'object'
+          ? data['stock'] as Record<string, unknown>
+          : {};
+
+        return {
+          ...data,
+          id: item.id,
+          companyId,
+          name: this.stringValue(data['name']),
+          description: this.stringValue(data['description']),
+          costPrice: this.numberValue(data['costPrice']),
+          sellPrice: this.numberValue(data['sellPrice']),
+          stock: {
+            current: this.numberValue(rawStock['current']),
+            minimum: this.numberValue(rawStock['minimum']),
+            maximum: this.numberValue(rawStock['maximum']),
+            location: this.stringValue(rawStock['location'])
+          },
+          active: data['active'] !== false
+        } as ProductRecord;
+      })
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }
 
@@ -58,6 +80,15 @@ export class ProductsService {
       throw new Error('Produto não encontrado nesta empresa.');
     }
     await deleteDoc(ref);
+  }
+
+  private stringValue(value: unknown): string {
+    return typeof value === 'string' ? value : '';
+  }
+
+  private numberValue(value: unknown): number {
+    const parsed = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   private requireRead(): void {
