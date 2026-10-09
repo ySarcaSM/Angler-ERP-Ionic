@@ -78,6 +78,9 @@ export class OrcamentosPage {
   get accordionWidth(): number { return Math.max(0, this.number(this.form.accordionWidth)); }
   get wasteFactor(): number { return 1 + Math.max(0, this.number(this.form.waste)) / 100; }
 
+  get previewRows(): number[] { return Array.from({ length: Math.min(12, this.tablePlan.rows) }, (_, index) => index); }
+  get previewColumns(): number[] { return Array.from({ length: Math.min(18, this.tablePlan.piecesPerRow) }, (_, index) => index); }
+
   get tablePlan(): CutPlan {
     const usableLength = 262;
     const usableWidth = Math.min(this.materialWidth, 150);
@@ -212,8 +215,8 @@ export class OrcamentosPage {
     };
   }
 
-  updateNumber(field: keyof MeasurementForm, value: number | string): void {
-    (this.form[field] as number | string) = value as never;
+  updateNumber(field: Exclude<keyof MeasurementForm, 'accessoryType'>, value: number | string | null): void {
+    (this.form as unknown as Record<string, number | string>)[field] = value === null || value === '' ? '' : Number(value);
     this.changeDetector.markForCheck();
   }
 
