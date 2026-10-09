@@ -195,7 +195,7 @@ export class AssistantPage implements OnInit {
     if (wantsCalculation) {
       sections.push('CÁLCULOS: faça contas com precisão. Para embalagens/peças retangulares e chapa retangular, diferencie limite teórico por área de plano de corte otimizado; área dividida não comprova que as peças caibam por encaixe.');
       const dimensions = prompt.match(/(?:medidas?|dimens(?:ões|oes))?\s*(\d+(?:[.,]\d+)?)\s*[x×]\s*(\d+(?:[.,]\d+)?)\s*[x×]\s*(\d+(?:[.,]\d+)?)/i);
-      const plan = prompt.match(/(?:plano|chapa|tecido|material)\s*(?:de\s*)?(\d+(?:[.,]\d+)?)\s*[x×/\\-]\s*(\d+(?:[.,]\d+)?)/i);
+      const plan = prompt.match(/(?:plano|chapa|tecido|material)\s*(?:de\s*)?(\d+(?:[.,]\d+)?)\s*[x×/-]\s*(\d+(?:[.,]\d+)?)/i);
       if (dimensions && plan) {
         const [a, b, d] = dimensions.slice(1).map(value => Number(value.replace(',', '.')));
         const [width, height] = plan.slice(1).map(value => Number(value.replace(',', '.')));
