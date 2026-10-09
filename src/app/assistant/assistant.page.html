@@ -1,0 +1,81 @@
+<ion-header>
+  <ion-toolbar class="assistant-toolbar">
+    <ion-buttons slot="start"><ion-back-button defaultHref="/home"></ion-back-button></ion-buttons>
+    <ion-title><ion-icon name="sparkles-outline"></ion-icon> Assistente Angler IA</ion-title>
+    <ion-buttons slot="end"><ion-button (click)="settingsOpen = !settingsOpen"><ion-icon slot="start" name="settings-outline"></ion-icon>Configurações</ion-button></ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="assistant-content">
+  <div class="assistant-layout">
+    <aside class="chat-sidebar">
+      <ion-button expand="block" (click)="newChat()"><ion-icon slot="start" name="add-outline"></ion-icon> Nova conversa</ion-button>
+      <p class="sidebar-label">SEU HISTÓRICO</p>
+      <div class="chat-list">
+        @for (chat of chats; track chat.id) {
+          <div class="chat-item" [class.active]="chat.id === activeChatId">
+            <button class="chat-select" (click)="selectChat(chat.id)">
+              <ion-icon name="chatbubble-ellipses-outline"></ion-icon><span>{{ chat.title }}</span>
+            </button>
+            <ion-button fill="clear" size="small" (click)="renameChat(chat)" aria-label="Renomear conversa"><ion-icon name="pencil-outline"></ion-icon></ion-button>
+            <ion-button fill="clear" size="small" color="danger" (click)="deleteChat(chat)" aria-label="Excluir conversa"><ion-icon name="trash-outline"></ion-icon></ion-button>
+          </div>
+        }
+      </div>
+      <div class="sidebar-note"><ion-icon name="lock-closed-outline"></ion-icon><span>Conversas salvas somente neste navegador. A chave de API não é salva.</span></div>
+    </aside>
+
+    <main class="conversation-area">
+      @if (settingsOpen) {
+        <section class="settings-panel">
+          <div class="settings-heading"><div><p class="eyebrow">CONFIGURAÇÃO DO MODELO</p><h2>Conecte seu provedor</h2></div><ion-button fill="clear" (click)="settingsOpen = false" aria-label="Fechar configurações"><ion-icon name="close-outline"></ion-icon></ion-button></div>
+          <div class="settings-grid">
+            <label>Provedor
+              <select [(ngModel)]="providerId" (ngModelChange)="models = []; modelId = ''; status = ''">
+                @for (provider of providers; track provider.id) { <option [value]="provider.id">{{ provider.name }}</option> }
+              </select>
+            </label>
+            <label>API key <input [(ngModel)]="apiKey" type="password" autocomplete="off" placeholder="Cole sua chave aqui (não é salva)"></label>
+            @if (providerId === 'custom') {
+              <label class="wide">URL base compatível com OpenAI <input [(ngModel)]="customBaseUrl" placeholder="https://seu-servidor/v1"></label>
+            }
+            <label class="wide">Modelo
+              <select [(ngModel)]="modelId">
+                <option value="">Selecione um modelo carregado</option>
+                @for (model of models; track model.id) { <option [value]="model.id">{{ model.name }} — {{ model.id }}</option> }
+              </select>
+            </label>
+          </div>
+          <div class="settings-actions">
+            <ion-button fill="outline" (click)="loadModels()" [disabled]="loadingModels || testing"><ion-spinner *ngIf="loadingModels"></ion-spinner><ion-icon *ngIf="!loadingModels" slot="start" name="list-outline"></ion-icon>Carregar modelos</ion-button>
+            <ion-button fill="outline" (click)="testApi()" [disabled]="testing || loadingModels"><ion-icon slot="start" name="pulse-outline"></ion-icon>Testar API</ion-button>
+            <ion-button (click)="findFirstWorking()" [disabled]="testing || loadingModels"><ion-icon slot="start" name="flash-outline"></ion-icon>Testar primeiro modelo funcional</ion-button>
+          </div>
+          @if (status) { <p class="connection-status" role="status">{{ status }}</p> }
+          <p class="privacy-note"><ion-icon name="shield-checkmark-outline"></ion-icon> A chave fica apenas na memória desta página e é enviada diretamente ao provedor escolhido. Não é gravada no Firebase nem no histórico local. Use apenas chaves suas e evite compartilhamento de tela.</p>
+        </section>
+      }
+
+      <section class="messages" aria-live="polite">
+        @if (!activeChat?.messages?.length) {
+          <div class="welcome-state"><div class="ai-mark"><ion-icon name="sparkles-outline"></ion-icon></div><h1>O que vamos resolver hoje?</h1><p>Consulte clientes, compare produtos, gere relatórios ou faça cálculos para sua operação.</p>
+            <div class="suggestion-list"><button (click)="draft = 'Quais são os meus clientes?'; send()">Listar meus clientes</button><button (click)="draft = 'Faça um relatório dos melhores produtos considerando preço e estoque.'; send()">Analisar meus produtos</button><button (click)="draft = 'Quantas mochilas de 20x30x15 cabem em um plano de 262x150? Explique as premissas.'; send()">Calcular aproveitamento de material</button></div>
+          </div>
+        } @else {
+          @for (message of activeChat?.messages; track message.createdAt) {
+            <article class="message-row" [class.user-message]="message.role === 'user'">
+              <div class="message-avatar"><ion-icon [name]="message.role === 'assistant' ? 'sparkles-outline' : 'person-outline'"></ion-icon></div>
+              <div class="message-body"><span class="message-author">{{ message.role === 'assistant' ? 'Angler IA' : 'Você' }}</span><p>{{ message.content }}</p></div>
+            </article>
+          }
+        }
+        @if (loading) { <div class="thinking"><ion-spinner></ion-spinner><span>Analisando dados e preparando a resposta…</span></div> }
+      </section>
+
+      <div class="composer">
+        <textarea [(ngModel)]="draft" (keydown.enter)="!$any($event).shiftKey && ($event.preventDefault(), send())" placeholder="Pergunte sobre clientes, produtos ou faça um cálculo..." rows="2" [disabled]="loading"></textarea>
+        <div class="composer-footer"><span>Enter para enviar · Shift+Enter para nova linha</span><ion-button (click)="send()" [disabled]="loading || !draft.trim()"><ion-icon slot="start" name="send-outline"></ion-icon>Enviar</ion-button></div>
+      </div>
+    </main>
+  </div>
+</ion-content>
