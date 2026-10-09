@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { ToastController } from '@ionic/angular/lazy';
 import { AuthService } from '../core/auth.service';
 import { ClientRecord } from '../models/erp.models';
@@ -30,6 +30,7 @@ export class ClientsPage implements OnInit {
   public readonly auth = inject(AuthService);
   private readonly service = inject(ClientsService);
   private readonly toastController = inject(ToastController);
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   ngOnInit(): void { void this.load(); }
 
@@ -38,7 +39,10 @@ export class ClientsPage implements OnInit {
     this.loadError = '';
     try { this.clients = await this.service.list(); this.filter(); }
     catch (error) { this.loadError = this.message(error); await this.toast(this.loadError); }
-    finally { this.loading = false; }
+    finally {
+      this.loading = false;
+      this.changeDetector.markForCheck();
+    }
   }
 
   filter(): void {
