@@ -12,14 +12,29 @@ export class ClientsService {
   private readonly collectionName = 'clients';
   private readonly auth = inject(AuthService);
 
-
-
   async list(): Promise<ClientRecord[]> {
     const companyId = this.requireCompany();
     this.requireRead();
     const q = query(collection(getFirestoreDb(), this.collectionName), where('companyId', '==', companyId));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(item => ({ id: item.id, ...item.data() } as ClientRecord))
+
+    return snapshot.docs
+      .map(item => {
+        const data = item.data();
+        return {
+          ...data,
+          id: item.id,
+          companyId,
+          name: this.stringValue(data['name']),
+          document: this.stringValue(data['document']),
+          email: this.stringValue(data['email']),
+          phone: this.stringValue(data['phone']),
+          contact: this.stringValue(data['contact']),
+          address: this.stringValue(data['address']),
+          notes: this.stringValue(data['notes']),
+          active: data['active'] !== false
+        } as ClientRecord;
+      })
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
   }
 
@@ -58,6 +73,10 @@ export class ClientsService {
       throw new Error('Cliente não encontrado nesta empresa.');
     }
     await deleteDoc(ref);
+  }
+
+  private stringValue(value: unknown): string {
+    return typeof value === 'string' ? value : '';
   }
 
   private requireRead(): void {
