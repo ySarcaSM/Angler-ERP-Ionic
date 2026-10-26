@@ -14,7 +14,8 @@
     <div class="toolbar-row"><ion-searchbar [(ngModel)]="search" (ionInput)="filter()" placeholder="Buscar por nome, descrição ou localização" [debounce]="150"></ion-searchbar><div class="record-count">{{ filtered.length }} registro(s)</div></div>
     <div class="table-card">
       @if (loading) {<div class="state"><ion-spinner></ion-spinner><p>Carregando produtos...</p></div>}
-      @if (!loading && filtered.length === 0) {<div class="state"><ion-icon name="cube-outline"></ion-icon><h3>Nenhum produto encontrado</h3><p>Cadastre o primeiro produto ou ajuste a busca.</p></div>}
+      @if (!loading && loadError) {<div class="state"><ion-icon name="alert-circle-outline"></ion-icon><h3>Não foi possível carregar os produtos</h3><p>{{ loadError }}</p><ion-button (click)="load()">Tentar novamente</ion-button></div>}
+      @if (!loading && !loadError && filtered.length === 0) {<div class="state"><ion-icon name="cube-outline"></ion-icon><h3>Nenhum produto encontrado</h3><p>Cadastre o primeiro produto ou ajuste a busca.</p></div>}
       @if (!loading && filtered.length) {<div class="table-scroll">
         <table>
           <thead><tr><th>Produto</th><th>Preço de custo</th><th>Preço de venda</th><th>Estoque</th><th>Status</th><th class="actions-col">Ações</th></tr></thead>

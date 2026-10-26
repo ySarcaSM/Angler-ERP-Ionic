@@ -18,7 +18,8 @@
     </div>
     <div class="table-card">
       @if (loading) {<div class="state"><ion-spinner></ion-spinner><p>Carregando clientes...</p></div>}
-      @if (!loading && filtered.length === 0) {<div class="state">
+      @if (!loading && loadError) {<div class="state"><ion-icon name="alert-circle-outline"></ion-icon><h3>Não foi possível carregar os clientes</h3><p>{{ loadError }}</p><ion-button (click)="load()">Tentar novamente</ion-button></div>}
+      @if (!loading && !loadError && filtered.length === 0) {<div class="state">
         <ion-icon name="people-outline"></ion-icon><h3>Nenhum cliente encontrado</h3><p>Cadastre o primeiro cliente ou ajuste a busca.</p>
       </div>}
       @if (!loading && filtered.length) {<div class="table-scroll">

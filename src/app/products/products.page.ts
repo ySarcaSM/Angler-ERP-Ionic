@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
 import { ToastController } from '@ionic/angular/lazy';
 import { AuthService } from '../core/auth.service';
 import { ProductRecord } from '../models/erp.models';
@@ -21,6 +21,7 @@ export class ProductsPage implements OnInit {
   filtered: ProductRecord[] = [];
   search = '';
   loading = true;
+  loadError = '';
   saving = false;
   isEditorOpen = false;
   editingId?: string;
@@ -29,14 +30,19 @@ export class ProductsPage implements OnInit {
   public readonly auth = inject(AuthService);
   private readonly service = inject(ProductsService);
   private readonly toastController = inject(ToastController);
+  private readonly changeDetector = inject(ChangeDetectorRef);
 
   ngOnInit(): void { void this.load(); }
 
   async load(): Promise<void> {
     this.loading = true;
+    this.loadError = '';
     try { this.products = await this.service.list(); this.filter(); }
-    catch (error) { await this.toast(this.message(error)); }
-    finally { this.loading = false; }
+    catch (error) { this.loadError = this.message(error); await this.toast(this.loadError); }
+    finally {
+      this.loading = false;
+      this.changeDetector.markForCheck();
+    }
   }
 
   filter(): void {

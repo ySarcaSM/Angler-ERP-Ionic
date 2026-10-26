@@ -6,6 +6,7 @@ import { PermissionGuard } from './core/permission.guard';
 const routes: Routes = [
   { path: 'login', loadChildren: () => import('./login/login.module').then(m => m.LoginPageModule) },
   { path: 'home', canActivate: [AuthGuard], loadChildren: () => import('./home/home.module').then(m => m.HomePageModule) },
+  { path: 'assistente', canActivate: [AuthGuard], loadChildren: () => import('./assistant/assistant.module').then(m => m.AssistantPageModule) },
   {
     path: 'clientes',
     canActivate: [AuthGuard, PermissionGuard],
