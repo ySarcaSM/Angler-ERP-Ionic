@@ -66,7 +66,7 @@ export class AuthService {
     }
     if (!profile?.companyId) {
       await signOut(getFirebaseAuth());
-      throw new Error('Seu usuário não possui vínculo ativo com uma empresa. Solicite acesso ao administrador.');
+      throw new Error('Não foi possível identificar sua empresa principal. Se sua conta tiver mais de um vínculo ativo, solicite ao administrador que mantenha apenas o vínculo correto ou defina sua empresa principal.');
     }
     this.userSubject.next(credential.user);
     this.profileSubject.next(profile);
@@ -114,7 +114,7 @@ export class AuthService {
       if (!snapshot.exists()) return null;
 
       const data = snapshot.data();
-      if (data['active'] === false) return null;
+      if (data['active'] === false || data['status'] === 'disabled') return null;
 
       const memberships = this.normalizeMemberships(data['memberships']);
       const companyId = await this.resolveCompanyId(user.uid, data, memberships);
@@ -143,22 +143,41 @@ export class AuthService {
     data: Record<string, any>,
     memberships: Record<string, CompanyMembership>
   ): Promise<string | null> {
-    const explicitCompanyId = typeof data['companyId'] === 'string' && data['companyId'].length
-      ? data['companyId'] : null;
-    if (explicitCompanyId && await this.getVerifiedMembership(uid, explicitCompanyId, memberships[explicitCompanyId])) {
-      return explicitCompanyId;
+    // No sistema original, companyId também pode representar a última empresa
+    // selecionada. O login Ionic sempre começa pela empresa que realmente
+    // pertence ao usuário, validada por companies/{id}.ownerUid.
+    const personalCompanyIds = [
+      typeof data['personalCompanyId'] === 'string' ? data['personalCompanyId'] : null,
+      ...Object.entries(memberships)
+        .filter(([, membership]) => membership.active && membership.personal === true)
+        .map(([companyId]) => companyId),
+      uid
+    ].filter((companyId): companyId is string => !!companyId);
+
+    for (const companyId of [...new Set(personalCompanyIds)]) {
+      if (await this.isCompanyOwner(uid, companyId)) return companyId;
     }
 
-    const personalCompanyId = typeof data['personalCompanyId'] === 'string' && data['personalCompanyId'].length
-      ? data['personalCompanyId'] : uid;
-    if (await this.isCompanyOwner(uid, personalCompanyId)) return personalCompanyId;
-
+    // Contas de funcionários sem empresa própria só entram automaticamente
+    // quando possuem exatamente um vínculo ativo. Vínculos múltiplos não
+    // escolhem a empresa por meio do contexto salvo em companyId.
     const activeCompanyIds = Object.entries(memberships)
       .filter(([, membership]) => membership.active)
       .map(([companyId]) => companyId);
-    if (activeCompanyIds.length === 1 &&
-        await this.getVerifiedMembership(uid, activeCompanyIds[0], memberships[activeCompanyIds[0]])) {
-      return activeCompanyIds[0];
+
+    if (activeCompanyIds.length === 1) {
+      const companyId = activeCompanyIds[0];
+      return await this.getVerifiedMembership(uid, companyId, memberships[companyId])
+        ? companyId : null;
+    }
+
+    // Compatibilidade com perfis legados sem mapa de memberships: aceita o
+    // companyId apenas se a associação for verificada diretamente no Firestore.
+    if (activeCompanyIds.length === 0 &&
+        typeof data['companyId'] === 'string' &&
+        data['companyId'].length > 0 &&
+        await this.getVerifiedMembership(uid, data['companyId'])) {
+      return data['companyId'];
     }
 
     return null;
@@ -213,6 +232,7 @@ export class AuthService {
       const role = this.normalizeRole(raw['role']);
       result[companyId] = {
         active: raw['active'] === true,
+        personal: raw['personal'] === true,
         role,
         operatorGroup: this.normalizeOperatorGroup(raw['operatorGroup']),
         accessRequestId: typeof raw['accessRequestId'] === 'string' ? raw['accessRequestId'] : undefined
