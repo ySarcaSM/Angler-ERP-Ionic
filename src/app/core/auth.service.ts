@@ -172,13 +172,18 @@ export class AuthService {
     if (membership?.active === true) return membership;
 
     const db = getFirestoreDb();
-    const [memberSnapshot, companySnapshot] = await Promise.all([
+    const [memberSnapshot, memberIndexSnapshot, companySnapshot] = await Promise.all([
       getDoc(doc(db, 'companies', companyId, 'members', uid)),
+      getDoc(doc(db, 'companyMembers', `${companyId}_${uid}`)),
       getDoc(doc(db, 'companies', companyId))
     ]);
 
-    if (memberSnapshot.exists() && memberSnapshot.data()['active'] === true) {
-      const member = memberSnapshot.data();
+    const member = memberSnapshot.exists() && memberSnapshot.data()['active'] === true
+      ? memberSnapshot.data()
+      : memberIndexSnapshot.exists() && memberIndexSnapshot.data()['active'] === true
+        ? memberIndexSnapshot.data()
+        : null;
+    if (member) {
       return {
         active: true,
         role: this.normalizeRole(member['role']),
