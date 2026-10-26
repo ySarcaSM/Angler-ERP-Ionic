@@ -192,11 +192,12 @@ service cloud.firestore {
 
     function userMembershipAfterMatches(companyId, userId, memberData) {
       let userPath = /databases/$(database)/documents/users/$(userId);
-      return existsAfter(userPath) &&
-        'memberships' in getAfter(userPath).data &&
-        companyId in getAfter(userPath).data.memberships &&
-        getAfter(userPath).data.memberships[companyId].active == memberData.active &&
-        getAfter(userPath).data.memberships[companyId].role == memberData.role;
+      let userAfter = getAfter(userPath);
+      return userAfter != null &&
+        'memberships' in userAfter.data &&
+        companyId in userAfter.data.memberships &&
+        userAfter.data.memberships[companyId].active == memberData.active &&
+        userAfter.data.memberships[companyId].role == memberData.role;
     }
 
     function isValidCompanyMemberWrite(companyId, userId) {
