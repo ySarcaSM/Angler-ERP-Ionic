@@ -316,11 +316,6 @@ service cloud.firestore {
         isAdmin(companyId);
       allow list: if isSuperAdmin() || isCompanyOwner(companyId) || isAdmin(companyId);
       allow create: if isSuperAdmin() ||
-        (request.resource.data.companyId == companyId &&
-          request.resource.data.userId == userId &&
-          request.resource.data.role == 'owner' &&
-          isCompanyOwner(companyId) &&
-          userMembershipAfterMatches(companyId, userId, request.resource.data)) ||
         isValidCompanyMemberWrite(companyId, userId);
       allow update: if isSuperAdmin() ||
         isValidCompanyMemberUpdate(companyId, userId);
