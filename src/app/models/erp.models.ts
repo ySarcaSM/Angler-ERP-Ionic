@@ -4,6 +4,7 @@ export type OperatorGroup = 'management' | 'financial' | 'budgets';
 export interface CompanyMembership {
   active: boolean;
   role: CompanyRole;
+  personal?: boolean;
   operatorGroup?: OperatorGroup;
   accessRequestId?: string;
 }
