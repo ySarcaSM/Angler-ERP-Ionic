@@ -188,13 +188,25 @@ export class AuthService {
     companyId: string,
     membership?: CompanyMembership
   ): Promise<CompanyMembership | null> {
+    const db = getFirestoreDb();
+    const companySnapshot = await getDoc(doc(db, 'companies', companyId));
+
+    // A propriedade da empresa é a fonte definitiva do papel. O mapa
+    // memberships pode estar desatualizado e não pode rebaixar o proprietário.
+    if (companySnapshot.exists() && companySnapshot.data()['ownerUid'] === uid) {
+      return {
+        active: true,
+        role: 'owner',
+        operatorGroup: membership?.operatorGroup,
+        accessRequestId: membership?.accessRequestId
+      };
+    }
+
     if (membership?.active === true) return membership;
 
-    const db = getFirestoreDb();
-    const [memberSnapshot, memberIndexSnapshot, companySnapshot] = await Promise.all([
+    const [memberSnapshot, memberIndexSnapshot] = await Promise.all([
       getDoc(doc(db, 'companies', companyId, 'members', uid)),
-      getDoc(doc(db, 'companyMembers', `${companyId}_${uid}`)),
-      getDoc(doc(db, 'companies', companyId))
+      getDoc(doc(db, 'companyMembers', `${companyId}_${uid}`))
     ]);
 
     const member = memberSnapshot.exists() && memberSnapshot.data()['active'] === true
@@ -209,10 +221,6 @@ export class AuthService {
         operatorGroup: membership?.operatorGroup,
         accessRequestId: membership?.accessRequestId
       };
-    }
-
-    if (companySnapshot.exists() && companySnapshot.data()['ownerUid'] === uid) {
-      return { active: true, role: 'owner' };
     }
 
     return null;
