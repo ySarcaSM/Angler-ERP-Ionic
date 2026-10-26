@@ -47,7 +47,7 @@
             </label>
           </div>
           <div class="settings-actions">
-            <ion-button fill="outline" (click)="loadModels()" [disabled]="loadingModels || testing"><ion-spinner *ngIf="loadingModels"></ion-spinner><ion-icon *ngIf="!loadingModels" slot="start" name="list-outline"></ion-icon>Carregar modelos</ion-button>
+            <ion-button fill="outline" (click)="loadModels()" [disabled]="loadingModels || testing">@if (loadingModels) { <ion-spinner></ion-spinner> } @else { <ion-icon slot="start" name="list-outline"></ion-icon> }Carregar modelos</ion-button>
             <ion-button fill="outline" (click)="testApi()" [disabled]="testing || loadingModels"><ion-icon slot="start" name="pulse-outline"></ion-icon>Testar API</ion-button>
             <ion-button (click)="findFirstWorking()" [disabled]="testing || loadingModels"><ion-icon slot="start" name="flash-outline"></ion-icon>Testar primeiro modelo funcional</ion-button>
           </div>
