@@ -27,14 +27,24 @@ export class AuthService {
   constructor() {
     onAuthStateChanged(getFirebaseAuth(), async user => {
       const revision = ++this.authRevision;
-      this.userSubject.next(user);
-      this.profileSubject.next(null);
 
       if (!user) {
+        this.userSubject.next(null);
+        this.profileSubject.next(null);
         this.resolveReady();
         return;
       }
 
+      this.userSubject.next(user);
+
+      // signIn() pode carregar o perfil antes deste callback. Preserve o perfil
+      // já verificado para não exibir um estado vazio ao entrar no painel.
+      if (this.profile?.uid === user.uid) {
+        this.resolveReady();
+        return;
+      }
+
+      this.profileSubject.next(null);
       const profile = await this.loadProfile(user);
       if (revision !== this.authRevision || getFirebaseAuth().currentUser?.uid !== user.uid) return;
 
