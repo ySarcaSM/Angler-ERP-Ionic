@@ -1,3 +1,9 @@
+// Shared Angler ERP / Angler ERP Ionic Firestore rules.
+// Tenant access is granted by company ownership, an active users/{uid}.memberships entry,
+// or an active companies/{companyId}/members/{uid} record. companyId alone is not authorization.
+// User-level active:false remains a legacy global deactivation flag; new company-specific
+// deactivation updates only the membership for that company.
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -24,6 +30,7 @@ service cloud.firestore {
       let user = currentUser();
       return isAuth() && user != null &&
         (!('active' in user) || user.active == true) &&
+        (!('status' in user) || user.status != 'disabled') &&
         (
           isCompanyOwner(companyId) ||
           ('memberships' in user &&
@@ -107,10 +114,9 @@ service cloud.firestore {
     }
 
     function canReadCollection(companyId, collectionName) {
-      return isSuperAdmin() ||
-        (isMember(companyId) &&
-          (roleForCompany(companyId) != 'operator' ||
-           operatorCanReadCollection(companyId, collectionName)));
+      // Matches the original app: module availability is enforced by its UI,
+      // while the rules enforce company membership for all roles.
+      return isSuperAdmin() || isMember(companyId);
     }
 
     function canWriteCollection(companyId, collectionName) {
@@ -146,17 +152,58 @@ service cloud.firestore {
         resource.data.memberships[user.companyId].active == true;
     }
 
-    function isAdminDeactivatingUser() {
+    function isValidCompanyRole(companyId, role) {
+      return role in ['owner', 'admin', 'manager', 'operator', 'viewer'] &&
+        (role != 'owner' || isCompanyOwner(companyId));
+    }
+
+    function isAdminRevokingCompanyMembership(userId) {
       let actor = currentUser();
+      let companyId = request.resource.data.accessControl.lastGrantedCompanyId;
       return isAuth() &&
         actor != null &&
-        actor.companyId is string &&
-        isAdmin(actor.companyId) &&
+        companyId is string &&
+        actor.companyId == companyId &&
+        isAdmin(companyId) &&
         'memberships' in resource.data &&
-        actor.companyId in resource.data.memberships &&
-        resource.data.memberships[actor.companyId].active == true &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active']) &&
-        request.resource.data.active == false;
+        companyId in resource.data.memberships &&
+        resource.data.memberships[companyId].active == true &&
+        resource.data.memberships[companyId].role != 'owner' &&
+        request.resource.data.memberships[companyId].active == false &&
+        request.resource.data.memberships[companyId].role == resource.data.memberships[companyId].role &&
+        request.resource.data.memberships.diff(resource.data.memberships).affectedKeys().hasOnly([companyId]) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberships', 'accessControl', 'updatedAt']);
+    }
+
+    function userMembershipAfterMatches(companyId, userId, memberData) {
+      let userPath = /databases/$(database)/documents/users/$(userId);
+      return existsAfter(userPath) &&
+        'memberships' in getAfter(userPath).data &&
+        companyId in getAfter(userPath).data.memberships &&
+        getAfter(userPath).data.memberships[companyId].active == memberData.active &&
+        getAfter(userPath).data.memberships[companyId].role == memberData.role;
+    }
+
+    function isValidCompanyMemberWrite(companyId, userId) {
+      return isAdmin(companyId) &&
+        request.resource.data.companyId == companyId &&
+        request.resource.data.userId == userId &&
+        request.resource.data.active is bool &&
+        isValidCompanyRole(companyId, request.resource.data.role) &&
+        userMembershipAfterMatches(companyId, userId, request.resource.data);
+    }
+
+    function isValidCompanyMemberUpdate(companyId, userId) {
+      return isValidCompanyMemberWrite(companyId, userId) &&
+        resource.data.companyId == companyId &&
+        resource.data.userId == userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'role', 'active', 'modules', 'email', 'name', 'lastName', 'updatedAt'
+        ]) &&
+        (userId != request.auth.uid ||
+          request.resource.data.role == resource.data.role ||
+          isCompanyOwner(companyId)) &&
+        (resource.data.role != 'owner' || isCompanyOwner(companyId));
     }
 
     function isAccessRequestOwnerApproval(userId) {
@@ -171,7 +218,7 @@ service cloud.firestore {
         isAdmin(grant.lastGrantedCompanyId) &&
         request.resource.data.memberships[grant.lastGrantedCompanyId].active == true &&
         request.resource.data.memberships[grant.lastGrantedCompanyId].accessRequestId == grant.lastGrantedRequestId &&
-        request.resource.data.memberships[grant.lastGrantedCompanyId].role in ['owner', 'admin', 'manager', 'operator', 'viewer'] &&
+        isValidCompanyRole(grant.lastGrantedCompanyId, request.resource.data.memberships[grant.lastGrantedCompanyId].role) &&
         request.resource.data.memberships.diff(resource.data.memberships).affectedKeys().hasOnly([grant.lastGrantedCompanyId]) &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberships', 'accessControl', 'updatedAt']);
     }
@@ -182,9 +229,14 @@ service cloud.firestore {
         grant.lastGrantedCompanyId is string &&
         isAdmin(grant.lastGrantedCompanyId) &&
         request.resource.data.memberships[grant.lastGrantedCompanyId].active == true &&
-        request.resource.data.memberships[grant.lastGrantedCompanyId].role in ['owner', 'admin', 'manager', 'operator', 'viewer'] &&
+        isValidCompanyRole(grant.lastGrantedCompanyId, request.resource.data.memberships[grant.lastGrantedCompanyId].role) &&
         request.resource.data.memberships.diff(resource.data.memberships).affectedKeys().hasOnly([grant.lastGrantedCompanyId]) &&
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberships', 'accessControl', 'updatedAt']);
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberships', 'accessControl', 'updatedAt']) &&
+        (userId != request.auth.uid ||
+          request.resource.data.memberships[grant.lastGrantedCompanyId].role == resource.data.memberships[grant.lastGrantedCompanyId].role ||
+          isCompanyOwner(grant.lastGrantedCompanyId)) &&
+        (resource.data.memberships[grant.lastGrantedCompanyId].role != 'owner' ||
+          isCompanyOwner(grant.lastGrantedCompanyId));
     }
 
     function isAccessibilityUpdate(userId) {
@@ -216,7 +268,7 @@ service cloud.firestore {
         ));
 
       allow update: if isSuperAdmin() ||
-        isAdminDeactivatingUser() ||
+        isAdminRevokingCompanyMembership(userId) ||
         (isAuth() && 'accessControl' in request.resource.data && isAccessRequestOwnerApproval(userId)) ||
         (isAuth() && 'accessControl' in request.resource.data && isCompanyMembershipUpdate(userId)) ||
         (isAuth() && request.auth.uid == userId && isCompanySwitch()) ||
@@ -245,9 +297,16 @@ service cloud.firestore {
     }
 
     match /companyMembers/{memberId} {
-      allow read, list: if isSuperAdmin() || isAdmin(resource.data.companyId);
-      allow create: if isSuperAdmin() || isAdmin(request.resource.data.companyId);
-      allow update, delete: if isSuperAdmin() || isAdmin(resource.data.companyId);
+      allow get, list: if isSuperAdmin() || isAdmin(resource.data.companyId);
+      allow create: if isSuperAdmin() ||
+        (request.resource.data.companyId is string &&
+          request.resource.data.userId is string &&
+          isValidCompanyMemberWrite(request.resource.data.companyId, request.resource.data.userId));
+      allow update: if isSuperAdmin() ||
+        (resource.data.companyId is string &&
+          resource.data.userId is string &&
+          isValidCompanyMemberUpdate(resource.data.companyId, resource.data.userId));
+      allow delete: if isSuperAdmin();
     }
 
     match /companies/{companyId}/members/{userId} {
@@ -257,14 +316,23 @@ service cloud.firestore {
         isAdmin(companyId);
       allow list: if isSuperAdmin() || isCompanyOwner(companyId) || isAdmin(companyId);
       allow create: if isSuperAdmin() ||
-        (isAuth() && request.auth.uid == companyId && userId == request.auth.uid) ||
-        isAdmin(companyId);
-      allow update, delete: if isSuperAdmin() || isAdmin(companyId);
+        (request.resource.data.companyId == companyId &&
+          request.resource.data.userId == userId &&
+          request.resource.data.role == 'owner' &&
+          isCompanyOwner(companyId) &&
+          userMembershipAfterMatches(companyId, userId, request.resource.data)) ||
+        isValidCompanyMemberWrite(companyId, userId);
+      allow update: if isSuperAdmin() ||
+        isValidCompanyMemberUpdate(companyId, userId);
+      allow delete: if isSuperAdmin();
     }
 
     match /auditLogs/{logId} {
       allow read: if isSuperAdmin() || isMember(resource.data.companyId);
-      allow create: if true;
+      allow create: if isSuperAdmin() ||
+        (request.resource.data.companyId is string &&
+          request.resource.data.userId == request.auth.uid &&
+          isMember(request.resource.data.companyId));
     }
 
     match /deletionRequests/{requestId} {
