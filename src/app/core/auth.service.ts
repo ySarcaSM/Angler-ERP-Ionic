@@ -114,6 +114,8 @@ export class AuthService {
       if (!snapshot.exists()) return null;
 
       const data = snapshot.data();
+      if (data['active'] === false) return null;
+
       const memberships = this.normalizeMemberships(data['memberships']);
       const companyId = await this.resolveCompanyId(user.uid, data, memberships);
       if (!companyId) return null;
