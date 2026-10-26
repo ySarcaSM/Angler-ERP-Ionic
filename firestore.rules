@@ -22,19 +22,21 @@ service cloud.firestore {
 
     function isMember(companyId) {
       let user = currentUser();
-      return isAuth() && user != null && (
-        user.companyId == companyId ||
-        ('memberships' in user &&
-          companyId in user.memberships &&
-          user.memberships[companyId].active == true) ||
-        (companyMemberExists(companyId) &&
-          companyMemberData(companyId).active == true)
-      );
+      return isAuth() && user != null &&
+        (!('active' in user) || user.active == true) &&
+        (
+          isCompanyOwner(companyId) ||
+          ('memberships' in user &&
+            companyId in user.memberships &&
+            user.memberships[companyId].active == true) ||
+          (companyMemberExists(companyId) &&
+            companyMemberData(companyId).active == true)
+        );
     }
 
     function roleForCompany(companyId) {
       let user = currentUser();
-      return user != null && (
+      return user != null && isMember(companyId) ? (
         (companyMemberExists(companyId) &&
          companyMemberData(companyId).active == true &&
          companyMemberData(companyId).role is string)
@@ -44,8 +46,8 @@ service cloud.firestore {
             user.memberships[companyId].active == true &&
             user.memberships[companyId].role is string)
           ? user.memberships[companyId].role
-          : (user.companyId == companyId ? user.role : null))
-      );
+          : (isCompanyOwner(companyId) ? 'owner' : null))
+      ) : null;
     }
 
     function isCompanyOwner(companyId) {
@@ -55,21 +57,21 @@ service cloud.firestore {
     }
 
     function isAdmin(companyId) {
-      return isAuth() && (
+      return isAuth() && isMember(companyId) && (
         isCompanyOwner(companyId) ||
         roleForCompany(companyId) in ['owner', 'admin']
       );
     }
 
     function isOwner(companyId) {
-      return isAuth() && (
+      return isAuth() && isMember(companyId) && (
         isCompanyOwner(companyId) ||
         roleForCompany(companyId) == 'owner'
       );
     }
 
     function isOperator(companyId) {
-      return isAuth() &&
+      return isAuth() && isMember(companyId) &&
         roleForCompany(companyId) == 'operator';
     }
 
@@ -144,6 +146,19 @@ service cloud.firestore {
         resource.data.memberships[user.companyId].active == true;
     }
 
+    function isAdminDeactivatingUser() {
+      let actor = currentUser();
+      return isAuth() &&
+        actor != null &&
+        actor.companyId is string &&
+        isAdmin(actor.companyId) &&
+        'memberships' in resource.data &&
+        actor.companyId in resource.data.memberships &&
+        resource.data.memberships[actor.companyId].active == true &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active']) &&
+        request.resource.data.active == false;
+    }
+
     function isAccessRequestOwnerApproval(userId) {
       let grant = request.resource.data.accessControl;
       let requestDoc = get(/databases/$(database)/documents/companyAccessRequests/$(grant.lastGrantedRequestId));
@@ -181,18 +196,8 @@ service cloud.firestore {
     function isCompanySwitch() {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['companyId', 'role']) &&
         request.resource.data.companyId is string &&
-        (
-          ('memberships' in resource.data &&
-            request.resource.data.companyId in resource.data.memberships &&
-            resource.data.memberships[request.resource.data.companyId].active == true &&
-            request.resource.data.role == resource.data.memberships[request.resource.data.companyId].role) ||
-          request.resource.data.companyId == resource.data.companyId ||
-          (
-            exists(/databases/$(database)/documents/companies/$(request.resource.data.companyId)) &&
-            get(/databases/$(database)/documents/companies/$(request.resource.data.companyId)).data.ownerUid == request.auth.uid &&
-            request.resource.data.role == 'owner'
-          )
-        );
+        isMember(request.resource.data.companyId) &&
+        request.resource.data.role == roleForCompany(request.resource.data.companyId);
     }
 
     match /users/{userId} {
@@ -211,7 +216,7 @@ service cloud.firestore {
         ));
 
       allow update: if isSuperAdmin() ||
-        isAdmin(resource.data.companyId) ||
+        isAdminDeactivatingUser() ||
         (isAuth() && 'accessControl' in request.resource.data && isAccessRequestOwnerApproval(userId)) ||
         (isAuth() && 'accessControl' in request.resource.data && isCompanyMembershipUpdate(userId)) ||
         (isAuth() && request.auth.uid == userId && isCompanySwitch()) ||

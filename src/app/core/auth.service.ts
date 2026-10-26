@@ -20,20 +20,34 @@ export class AuthService {
   readonly profile$ = this.profileSubject.asObservable();
   private resolveReady!: () => void;
   private readonly readyPromise = new Promise<void>(resolve => this.resolveReady = resolve);
+  private authRevision = 0;
 
   private readonly router = inject(Router);
 
   constructor() {
     onAuthStateChanged(getFirebaseAuth(), async user => {
+      const revision = ++this.authRevision;
       this.userSubject.next(user);
-      const profile = user ? await this.loadProfile(user) : null;
+      this.profileSubject.next(null);
+
+      if (!user) {
+        this.resolveReady();
+        return;
+      }
+
+      const profile = await this.loadProfile(user);
+      if (revision !== this.authRevision || getFirebaseAuth().currentUser?.uid !== user.uid) return;
+
       this.profileSubject.next(profile);
       this.resolveReady();
     });
   }
 
   get currentUser(): User | null { return this.userSubject.value; }
-  get profile(): UserProfile | null { return this.profileSubject.value; }
+  get profile(): UserProfile | null {
+    const profile = this.profileSubject.value;
+    return profile?.uid === this.userSubject.value?.uid ? profile : null;
+  }
   get companyId(): string | null { return this.profile?.companyId ?? null; }
   get role(): CompanyRole { return this.profile?.role ?? 'viewer'; }
   get operatorGroup(): OperatorGroup | null {
@@ -47,9 +61,12 @@ export class AuthService {
   async signIn(email: string, password: string): Promise<void> {
     const credential = await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
     const profile = await this.loadProfile(credential.user);
+    if (getFirebaseAuth().currentUser?.uid !== credential.user.uid) {
+      throw new Error('A sessão foi alterada durante o login. Tente novamente.');
+    }
     if (!profile?.companyId) {
       await signOut(getFirebaseAuth());
-      throw new Error('Seu usuário não está associado a uma empresa. Solicite acesso ao administrador.');
+      throw new Error('Seu usuário não possui vínculo ativo com uma empresa. Solicite acesso ao administrador.');
     }
     this.userSubject.next(credential.user);
     this.profileSubject.next(profile);
@@ -57,9 +74,10 @@ export class AuthService {
   }
 
   async signOut(): Promise<void> {
-    await signOut(getFirebaseAuth());
+    ++this.authRevision;
     this.userSubject.next(null);
     this.profileSubject.next(null);
+    await signOut(getFirebaseAuth());
     await this.router.navigateByUrl('/login');
   }
 
@@ -96,19 +114,22 @@ export class AuthService {
       if (!snapshot.exists()) return null;
 
       const data = snapshot.data();
+      if (data['active'] === false) return null;
+
       const memberships = this.normalizeMemberships(data['memberships']);
-      const companyId = this.resolveCompanyId(data, memberships);
+      const companyId = await this.resolveCompanyId(user.uid, data, memberships);
       if (!companyId) return null;
 
-      const membership = memberships[companyId];
-      const role = membership?.active ? membership.role : this.normalizeRole(data['role']);
+      const membership = await this.getVerifiedMembership(user.uid, companyId, memberships[companyId]);
+      if (!membership) return null;
+      memberships[companyId] = membership;
 
       return {
         uid: user.uid,
         email: user.email ?? undefined,
         displayName: user.displayName ?? undefined,
         companyId,
-        role,
+        role: membership.role,
         memberships
       };
     } catch (error) {
@@ -117,10 +138,65 @@ export class AuthService {
     }
   }
 
-  private resolveCompanyId(data: Record<string, any>, memberships: Record<string, CompanyMembership>): string | null {
-    if (typeof data['companyId'] === 'string' && data['companyId'].length) return data['companyId'];
-    const activeMembership = Object.entries(memberships).find(([, membership]) => membership.active);
-    return activeMembership?.[0] ?? null;
+  private async resolveCompanyId(
+    uid: string,
+    data: Record<string, any>,
+    memberships: Record<string, CompanyMembership>
+  ): Promise<string | null> {
+    const explicitCompanyId = typeof data['companyId'] === 'string' && data['companyId'].length
+      ? data['companyId'] : null;
+    if (explicitCompanyId && await this.getVerifiedMembership(uid, explicitCompanyId, memberships[explicitCompanyId])) {
+      return explicitCompanyId;
+    }
+
+    const personalCompanyId = typeof data['personalCompanyId'] === 'string' && data['personalCompanyId'].length
+      ? data['personalCompanyId'] : uid;
+    if (await this.isCompanyOwner(uid, personalCompanyId)) return personalCompanyId;
+
+    const activeCompanyIds = Object.entries(memberships)
+      .filter(([, membership]) => membership.active)
+      .map(([companyId]) => companyId);
+    if (activeCompanyIds.length === 1 &&
+        await this.getVerifiedMembership(uid, activeCompanyIds[0], memberships[activeCompanyIds[0]])) {
+      return activeCompanyIds[0];
+    }
+
+    return null;
+  }
+
+  private async getVerifiedMembership(
+    uid: string,
+    companyId: string,
+    membership?: CompanyMembership
+  ): Promise<CompanyMembership | null> {
+    if (membership?.active === true) return membership;
+
+    const db = getFirestoreDb();
+    const [memberSnapshot, companySnapshot] = await Promise.all([
+      getDoc(doc(db, 'companies', companyId, 'members', uid)),
+      getDoc(doc(db, 'companies', companyId))
+    ]);
+
+    if (memberSnapshot.exists() && memberSnapshot.data()['active'] === true) {
+      const member = memberSnapshot.data();
+      return {
+        active: true,
+        role: this.normalizeRole(member['role']),
+        operatorGroup: membership?.operatorGroup,
+        accessRequestId: membership?.accessRequestId
+      };
+    }
+
+    if (companySnapshot.exists() && companySnapshot.data()['ownerUid'] === uid) {
+      return { active: true, role: 'owner' };
+    }
+
+    return null;
+  }
+
+  private async isCompanyOwner(uid: string, companyId: string): Promise<boolean> {
+    const snapshot = await getDoc(doc(getFirestoreDb(), 'companies', companyId));
+    return snapshot.exists() && snapshot.data()['ownerUid'] === uid;
   }
 
   private normalizeMemberships(value: unknown): Record<string, CompanyMembership> {
