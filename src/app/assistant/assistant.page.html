@@ -34,7 +34,7 @@
           @for (message of activeChat.messages; track message.createdAt) {
             <article class="message-row" [class.user-message]="message.role === 'user'">
               <div class="message-avatar"><ion-icon [name]="message.role === 'assistant' ? 'sparkles-outline' : 'person-outline'"></ion-icon></div>
-              <div class="message-body"><span class="message-author">{{ message.role === 'assistant' ? 'Angler IA' : 'Você' }}</span><p>{{ message.content }}</p></div>
+              <div class="message-body"><span class="message-author">{{ message.role === 'assistant' ? 'Angler IA' : 'Você' }}</span>@if (message.role === 'assistant') { <div class="message-content" [innerHTML]="formatMessage(message.content)"></div> } @else { <div class="message-content">{{ message.content }}</div> }</div>
             </article>
           }
         }
@@ -42,9 +42,9 @@
       </section>
 
       <div class="composer">
+        <p class="privacy-note">A chave do .env é incorporada ao app publicado e pode ser extraída. Mensagens e contexto necessários são enviados à Google; dados no nível gratuito podem ser usados para melhorar os produtos Google. Evite informações pessoais ou confidenciais.</p>
         <textarea [(ngModel)]="draft" (keydown.enter)="handleEnter($event)" placeholder="Pergunte sobre clientes, produtos ou faça um cálculo..." rows="2" [disabled]="loading"></textarea>
         <div class="composer-footer"><span>Enter para enviar · Shift+Enter para nova linha</span><ion-button (click)="send()" [disabled]="loading || !draft.trim()"><ion-icon slot="start" name="send-outline"></ion-icon>Enviar</ion-button></div>
-        <p class="privacy-note">A chave do .env é incorporada ao app publicado e pode ser extraída. Mensagens e contexto necessários são enviados à Google; dados no nível gratuito podem ser usados para melhorar os produtos Google. Evite informações pessoais ou confidenciais.</p>
       </div>
     </main>
   </div>
