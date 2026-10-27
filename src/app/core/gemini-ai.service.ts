@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { GEMINI_API_KEY } from './gemini-key.generated';
 
 const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta';
-export const FREE_GEMINI_MODEL_PRIORITY = [
+const FREE_MODEL_FALLBACKS = [
   'gemini-3.8-flash',
   'gemini-3.6-flash',
   'gemini-3.5-flash-lite',
@@ -14,87 +14,105 @@ export interface GeminiMessage {
   content: string;
 }
 
-export interface GeminiResult {
-  text: string;
-  modelId: string;
-}
-
-export function selectFreeGeminiModels(models: unknown): string[] {
-  if (!Array.isArray(models)) return [];
-  const available = new Set(models
-    .filter((model): model is { name?: string; supportedGenerationMethods?: unknown } =>
-      !!model && typeof model === 'object')
-    .filter(model => Array.isArray(model.supportedGenerationMethods) &&
-      model.supportedGenerationMethods.includes('generateContent'))
-    .map(model => String(model.name ?? '').replace(/^models\//, '')));
-  return FREE_GEMINI_MODEL_PRIORITY.filter(model => available.has(model));
-}
-
 @Injectable({ providedIn: 'root' })
 export class GeminiAiService {
-  async test(): Promise<GeminiResult> {
-    return this.generate([{ role: 'user', content: 'Responda somente: API funcionando.' }]);
-  }
+  private selectedModelId: typeof FREE_MODEL_FALLBACKS[number] = FREE_MODEL_FALLBACKS[0];
 
-  async generate(messages: GeminiMessage[]): Promise<GeminiResult> {
+  async generate(messages: GeminiMessage[], onText?: (text: string) => void): Promise<string> {
     const key = GEMINI_API_KEY.trim();
     if (!key || key.startsWith('COLE_')) {
       throw new Error('Defina GEMINI_API_KEY no arquivo .env e reinicie o app.');
     }
-    const available = await this.fetchAvailableModels(key);
-    const candidates = selectFreeGeminiModels(available);
-    if (!candidates.length) {
-      throw new Error('A chave não disponibiliza nenhum modelo Gemini da faixa gratuita.');
-    }
 
+    const orderedModels = [
+      this.selectedModelId,
+      ...FREE_MODEL_FALLBACKS.filter(model => model !== this.selectedModelId)
+    ];
     let lastError: unknown;
-    for (const modelId of candidates.slice(0, 4)) {
+
+    for (const modelId of orderedModels) {
       try {
-        return { text: await this.callModel(key, modelId, messages), modelId };
+        onText?.('');
+        const answer = await this.streamModel(key, modelId, messages, onText);
+        this.selectedModelId = modelId;
+        return answer;
       } catch (error) {
         lastError = error;
       }
     }
+
     throw lastError instanceof Error
       ? lastError
-      : new Error('Não foi possível executar um modelo Gemini gratuito disponível.');
+      : new Error('Não foi possível concluir a solicitação ao Gemini.');
   }
 
-  private async fetchAvailableModels(key: string): Promise<unknown[]> {
-    const response = await fetch(`${GEMINI_API}/models`, {
-      headers: { 'x-goog-api-key': key }
-    });
-    const data = await this.readJson(response);
-    return data.models ?? [];
-  }
-
-  private async callModel(key: string, modelId: string, messages: GeminiMessage[]): Promise<string> {
+  private async streamModel(
+    key: string,
+    modelId: string,
+    messages: GeminiMessage[],
+    onText?: (text: string) => void
+  ): Promise<string> {
     const system = messages.find(message => message.role === 'system');
     const contents = messages.filter(message => message.role !== 'system').map(message => ({
       role: message.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: message.content }]
     }));
-    const response = await fetch(`${GEMINI_API}/models/${encodeURIComponent(modelId)}:generateContent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
-      body: JSON.stringify({
-        ...(system ? { systemInstruction: { parts: [{ text: system.content }] } } : {}),
-        contents,
-        generationConfig: { maxOutputTokens: 2048 }
-      })
-    });
-    const data = await this.readJson(response);
-    const text = (data.candidates?.[0]?.content?.parts ?? [])
-      .map((part: { text?: string }) => part.text ?? '').join('\n');
-    if (!text) throw new Error('O Gemini não retornou uma resposta de texto.');
-    return text;
-  }
+    const response = await fetch(
+      `${GEMINI_API}/models/${encodeURIComponent(modelId)}:streamGenerateContent?alt=sse`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({
+          ...(system ? { systemInstruction: { parts: [{ text: system.content }] } } : {}),
+          contents,
+          generationConfig: { maxOutputTokens: 2048 }
+        })
+      }
+    );
 
-  private async readJson(response: Response): Promise<any> {
-    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
       throw new Error(data.error?.message ?? `Erro HTTP ${response.status}: ${response.statusText}`);
     }
-    return data;
+    if (!response.body) throw new Error('O navegador não disponibilizou a resposta em streaming.');
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let answer = '';
+
+    const consumeEvent = (event: string): void => {
+      const data = event.split('\n')
+        .filter(line => line.startsWith('data:'))
+        .map(line => line.slice(5).trim())
+        .join('\n');
+      if (!data || data === '[DONE]') return;
+
+      let payload: any;
+      try { payload = JSON.parse(data); } catch { return; }
+      const chunk = (payload.candidates?.[0]?.content?.parts ?? [])
+        .map((part: { text?: string }) => part.text ?? '')
+        .join('');
+      if (!chunk) return;
+      answer += chunk;
+      onText?.(answer);
+    };
+
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        buffer += decoder.decode(value, { stream: !done }).replace(/\r\n/g, '\n');
+        const events = buffer.split('\n\n');
+        buffer = events.pop() ?? '';
+        events.forEach(consumeEvent);
+        if (done) break;
+      }
+      if (buffer.trim()) consumeEvent(buffer);
+    } finally {
+      reader.releaseLock();
+    }
+
+    if (!answer) throw new Error('O Gemini não retornou uma resposta de texto.');
+    return answer;
   }
 }

@@ -19,21 +19,15 @@ export class AssistantPage implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly gemini = inject(GeminiAiService);
-  modelId = '';
   chats: ChatThread[] = [];
   activeChatId = '';
   draft = '';
   loading = false;
-  loadingModels = false;
-  testing = false;
-  settingsOpen = true;
-  status = '';
   private readonly storageKey = 'angler-assistant-chats-v1';
 
   ngOnInit(): void {
     this.loadChats();
     if (!this.chats.length) this.newChat();
-    void this.testApi();
   }
 
   get activeChat(): ChatThread | undefined { return this.chats.find(chat => chat.id === this.activeChatId); }
@@ -59,22 +53,6 @@ export class AssistantPage implements OnInit {
     this.saveChats();
   }
 
-  async testApi(): Promise<void> {
-    if (this.testing) return;
-    this.testing = true;
-    this.status = 'Testando a chave Gemini e selecionando o melhor modelo disponível...';
-    try {
-      const result = await this.gemini.test();
-      this.modelId = result.modelId;
-      this.status = `Gemini conectado. Modelo selecionado automaticamente: ${result.modelId}`;
-    } catch (error) {
-      this.status = `Falha no teste Gemini: ${this.message(error)}`;
-    } finally {
-      this.testing = false;
-      this.cdr.markForCheck();
-    }
-  }
-
   handleEnter(event: Event): void {
     const keyboardEvent = event as KeyboardEvent;
     if (!keyboardEvent.shiftKey) { keyboardEvent.preventDefault(); void this.send(); }
@@ -88,7 +66,8 @@ export class AssistantPage implements OnInit {
     this.draft = '';
     chat.messages.push({ role: 'user', content: prompt, createdAt: Date.now() });
     if (chat.messages.length === 1 && chat.title === 'Nova conversa') chat.title = prompt.slice(0, 42) + (prompt.length > 42 ? '…' : '');
-    chat.updatedAt = Date.now(); this.saveChats(); this.loading = true; this.status = '';
+    chat.updatedAt = Date.now(); this.saveChats(); this.loading = true;
+    let assistantMessage: ChatMessage | undefined;
     try {
       const context = await this.buildBusinessContext(prompt);
       const system = [
@@ -106,17 +85,22 @@ export class AssistantPage implements OnInit {
         'ORÇAMENTO RÁPIDO: custoMaterial = (materialLinear_cm/100)×custoMaterialPorMetro. custoAcessorios = (metrosDeAlças + metrosDeCordões)×custoAcessorioPorMetro. custoMaoDeObra = Q×custoMaoDeObraPorUnidade. custoProducaoTotal = custoMaterial + custoAcessorios + custoMaoDeObra. custoPorUnidade = custoProducaoTotal/Q, se Q>0. valorVendaTotal = Q×precoVendaUnitario. lucroPorUnidade = precoVendaUnitario − custoPorUnidade. resultadoTotal = valorVendaTotal − custoProducaoTotal. Se pedirem margem sobre venda: lucroPorUnidade/precoVendaUnitario×100, quando o preço for maior que zero; não confundir margem com markup.',
         'QUAL CÁLCULO USAR: consumo de material/desperdício → fórmula de área. Quantas unidades cabem no plano → U=262, V até 150, floor por eixo e comparação de orientações permitidas; depois conferir corte separado das laterais. Mochila com sanfona → acrescentar 2S no comprimento do conjunto e contar 2 sanfonas por unidade. Alças/cordões → usar escala H/30. Custo/lucro → fórmulas de orçamento rápido e valores de custo/venda informados. Sobras → U − unidadesPorFileira×G e V − fileiras×alturaDaPeça.',
         'DICAS E LIMITES: se o usuário escrever “262/150”, interprete como plano de 262 cm × 150 cm quando o contexto indicar comprimento útil × largura do material. Informe orientação, capacidade dos corpos, necessidade de cortes laterais e desperdício. A lógica oficial é um cálculo retangular por fileiras/colunas, não um nesting avançado. Não invente margem de costura, bolsos, tampa, alças adicionais nem partes que não estejam nos dados. Se faltar uma variável relevante, declare a hipótese ou pergunte.',
-        'A chave de API é enviada diretamente do navegador ao provedor selecionado e não deve ser mencionada nem repetida.',
+        'Nunca revele nem repita a chave de API.',
         context
       ].join('\n\n');
       const history = chat.messages.slice(-16).map(message => ({ role: message.role, content: message.content }));
-      const result = await this.gemini.generate([{ role: 'system', content: system }, ...history]);
-      const answer = result.text;
-      this.modelId = result.modelId;
-      chat.messages.push({ role: 'assistant', content: answer, createdAt: Date.now() });
+      assistantMessage = { role: 'assistant', content: '', createdAt: Date.now() };
+      chat.messages.push(assistantMessage);
+      this.cdr.markForCheck();
+      await this.gemini.generate([{ role: 'system', content: system }, ...history], text => {
+        assistantMessage!.content = text;
+        this.cdr.markForCheck();
+      });
       chat.updatedAt = Date.now(); this.saveChats();
     } catch (error) {
-      chat.messages.push({ role: 'assistant', content: `Não consegui concluir a solicitação: ${this.message(error)}\n\nVerifique se a GEMINI_API_KEY está configurada no backend do Firebase.`, createdAt: Date.now() });
+      const failure = `Não consegui concluir a solicitação: ${this.message(error)}`;
+      if (assistantMessage) assistantMessage.content = failure;
+      else chat.messages.push({ role: 'assistant', content: failure, createdAt: Date.now() });
       this.saveChats();
     } finally { this.loading = false; this.cdr.markForCheck(); }
   }
@@ -126,29 +110,41 @@ export class AssistantPage implements OnInit {
     const wantsClients = /cliente|clientes|contato|contatos|comprador/.test(lower);
     const wantsProducts = /produto|produtos|estoque|preço|precos|venda|vendas|melhor|relatório|relatorio|mochila/.test(lower);
     const wantsCalculation = /quant|calcule|calcular|cálculo|calculo|medida|medidas|plano|área|area|quanto|porcentagem|margem/.test(lower);
+
+    const [clients, products] = await Promise.all([
+      wantsClients
+        ? this.clientsService.list().then(value => ({ value })).catch(error => ({ error: this.message(error) }))
+        : Promise.resolve(null),
+      wantsProducts
+        ? this.productsService.list().then(value => ({ value })).catch(error => ({ error: this.message(error) }))
+        : Promise.resolve(null)
+    ]);
+
     const sections: string[] = [];
-    if (wantsClients) {
-      try {
-        const clients = await this.clientsService.list();
-        sections.push('CLIENTES DISPONÍVEIS PARA ESTA SESSÃO:\n' + JSON.stringify(clients.map(c => ({
-          nome: c.name, documento: c.document, email: c.email, telefone: c.phone, contato: c.contact, endereço: c.address, ativo: c.active
-        }))));
-      } catch (error) { sections.push('CLIENTES: não foi possível ler o módulo com as permissões atuais (' + this.message(error) + ').'); }
+    if (clients && 'value' in clients) {
+      sections.push('CLIENTES DISPONÍVEIS PARA ESTA SESSÃO:\n' + JSON.stringify(clients.value.map(c => ({
+        nome: c.name, documento: c.document, email: c.email, telefone: c.phone, contato: c.contact, endereço: c.address, ativo: c.active
+      }))));
+    } else if (clients && 'error' in clients) {
+      sections.push('CLIENTES: não foi possível ler o módulo com as permissões atuais (' + clients.error + ').');
     }
-    if (wantsProducts) {
-      try {
-        const products = await this.productsService.list();
-        sections.push('PRODUTOS DISPONÍVEIS PARA ESTA SESSÃO:\n' + JSON.stringify(products.map(p => ({
-          nome: p.name, descrição: p.description, custo: p.costPrice, preçoVenda: p.sellPrice,
-          estoqueAtual: p.stock?.current, estoqueMínimo: p.stock?.minimum, estoqueMáximo: p.stock?.maximum,
-          localização: p.stock?.location, ativo: p.active
-        }))));
-      } catch (error) { sections.push('PRODUTOS: não foi possível ler o módulo com as permissões atuais (' + this.message(error) + ').'); }
+
+    if (products && 'value' in products) {
+      sections.push('PRODUTOS DISPONÍVEIS PARA ESTA SESSÃO:\n' + JSON.stringify(products.value.map(p => ({
+        nome: p.name, descrição: p.description, custo: p.costPrice, preçoVenda: p.sellPrice,
+        estoqueAtual: p.stock?.current, estoqueMínimo: p.stock?.minimum, estoqueMáximo: p.stock?.maximum,
+        localização: p.stock?.location, ativo: p.active
+      }))));
+    } else if (products && 'error' in products) {
+      sections.push('PRODUTOS: não foi possível ler o módulo com as permissões atuais (' + products.error + ').');
     }
+
     if (wantsCalculation) {
       sections.push('REGRAS OFICIAIS DE MEDIÇÃO DO ANGLER ERP: consulte as fórmulas completas do prompt de sistema. O plano padrão usa 262 cm de comprimento útil (mesa de 300 cm menos 19 cm em cada lateral) e até 150 cm de largura. Calcule a capacidade por fileiras e colunas inteiras, compare as duas orientações quando não houver sanfona e calcule as laterais separadamente. A aproximação por área não é a fórmula oficial de capacidade física.');
     }
-    return sections.length ? 'CONTEXTO DO ERP (dados atuais consultados na sessão):\n' + sections.join('\n\n') : 'Nenhum dado do ERP foi solicitado explicitamente. Se a pergunta depender de clientes/produtos, consulte os serviços correspondentes quando pertinente.';
+    return sections.length
+      ? 'CONTEXTO DO ERP (dados atuais consultados na sessão):\n' + sections.join('\n\n')
+      : 'Nenhum dado do ERP foi solicitado explicitamente. Se a pergunta depender de clientes/produtos, consulte os serviços correspondentes quando pertinente.';
   }
 
   private loadChats(): void {
@@ -160,7 +156,7 @@ export class AssistantPage implements OnInit {
     } catch { this.chats = []; }
   }
   private saveChats(): void {
-    try { localStorage.setItem(this.storageKey, JSON.stringify(this.chats)); } catch { this.status = 'Não foi possível salvar as conversas neste navegador.'; }
+    try { localStorage.setItem(this.storageKey, JSON.stringify(this.chats)); } catch { console.warn('Não foi possível salvar as conversas neste navegador.'); }
   }
   private makeId(): string { return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`; }
   private message(error: unknown): string { return error instanceof Error ? error.message : 'Erro desconhecido.'; }

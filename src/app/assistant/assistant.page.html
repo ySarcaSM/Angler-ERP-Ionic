@@ -2,7 +2,6 @@
   <ion-toolbar class="assistant-toolbar">
     <ion-buttons slot="start"><ion-back-button defaultHref="/home"></ion-back-button></ion-buttons>
     <ion-title><ion-icon name="sparkles-outline"></ion-icon> Assistente Angler IA</ion-title>
-    <ion-buttons slot="end"><ion-button (click)="settingsOpen = !settingsOpen"><ion-icon slot="start" name="settings-outline"></ion-icon>Configurações</ion-button></ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -22,32 +21,17 @@
           </div>
         }
       </div>
-      <div class="sidebar-note"><ion-icon name="lock-closed-outline"></ion-icon><span>Conversas salvas somente neste navegador. A chave Gemini fica no servidor.</span></div>
+      <div class="sidebar-note"><ion-icon name="lock-closed-outline"></ion-icon><span>Conversas salvas somente neste navegador.</span></div>
     </aside>
 
     <main class="conversation-area">
-      @if (settingsOpen) {
-        <section class="settings-panel">
-          <div class="settings-heading"><div><p class="eyebrow">MODELO AUTOMÁTICO</p><h2>Google Gemini</h2></div><ion-button fill="clear" (click)="settingsOpen = false" aria-label="Fechar configurações"><ion-icon name="close-outline"></ion-icon></ion-button></div>
-          <p class="gemini-description">O sistema testa a API e seleciona automaticamente o melhor modelo Gemini disponível. A chave é mantida no backend do Firebase e nunca é enviada pelo navegador.</p>
-          <div class="settings-actions">
-            <ion-button fill="outline" (click)="testApi()" [disabled]="testing">
-              @if (testing) { <ion-spinner></ion-spinner> } @else { <ion-icon slot="start" name="pulse-outline"></ion-icon> }
-              Testar API e selecionar modelo
-            </ion-button>
-          </div>
-          @if (status) { <p class="connection-status" role="status">{{ status }}</p> }
-          <p class="privacy-note"><ion-icon name="shield-checkmark-outline"></ion-icon> A chave vem do .env e é incluída no app publicado, então pode ser extraída. A lista de modelos é limitada à faixa gratuita. Mensagens e contexto empresarial vão para Google Gemini; no nível gratuito, a Google pode usar esses dados para melhorar seus produtos. Não envie dados pessoais ou confidenciais.</p>
-        </section>
-      }
-
       <section class="messages" aria-live="polite">
         @if (!activeChat?.messages?.length) {
           <div class="welcome-state"><div class="ai-mark"><ion-icon name="sparkles-outline"></ion-icon></div><h1>O que vamos resolver hoje?</h1><p>Consulte clientes, compare produtos, gere relatórios ou faça cálculos para sua operação.</p>
             <div class="suggestion-list"><button (click)="draft = 'Quais são os meus clientes?'; send()">Listar meus clientes</button><button (click)="draft = 'Faça um relatório dos melhores produtos considerando preço e estoque.'; send()">Analisar meus produtos</button><button (click)="draft = 'Quantas mochilas de 20x30x15 cabem em um plano de 262x150? Explique as premissas.'; send()">Calcular aproveitamento de material</button></div>
           </div>
         } @else {
-          @for (message of activeChat?.messages; track message.createdAt) {
+          @for (message of activeChat.messages; track message.createdAt) {
             <article class="message-row" [class.user-message]="message.role === 'user'">
               <div class="message-avatar"><ion-icon [name]="message.role === 'assistant' ? 'sparkles-outline' : 'person-outline'"></ion-icon></div>
               <div class="message-body"><span class="message-author">{{ message.role === 'assistant' ? 'Angler IA' : 'Você' }}</span><p>{{ message.content }}</p></div>
@@ -60,6 +44,7 @@
       <div class="composer">
         <textarea [(ngModel)]="draft" (keydown.enter)="handleEnter($event)" placeholder="Pergunte sobre clientes, produtos ou faça um cálculo..." rows="2" [disabled]="loading"></textarea>
         <div class="composer-footer"><span>Enter para enviar · Shift+Enter para nova linha</span><ion-button (click)="send()" [disabled]="loading || !draft.trim()"><ion-icon slot="start" name="send-outline"></ion-icon>Enviar</ion-button></div>
+        <p class="privacy-note">A chave do .env é incorporada ao app publicado e pode ser extraída. Mensagens e contexto necessários são enviados à Google; dados no nível gratuito podem ser usados para melhorar os produtos Google. Evite informações pessoais ou confidenciais.</p>
       </div>
     </main>
   </div>
