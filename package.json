@@ -12,8 +12,8 @@
     "lint": "ng lint",
     "prestart": "node scripts/load-env.mjs",
     "prebuild": "node scripts/load-env.mjs",
-    "pretest": "node scripts/load-env.mjs",
-    "prelint": "node scripts/load-env.mjs"
+    "pretest": "node scripts/load-env.mjs --optional",
+    "prelint": "node scripts/load-env.mjs --optional"
   },
   "private": true,
   "dependencies": {
