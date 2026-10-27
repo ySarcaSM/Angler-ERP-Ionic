@@ -21,9 +21,12 @@ async function requireActiveCompanyUser(uid) {
   if (profile.active === false || profile.status === 'disabled') {
     throw new HttpsError('permission-denied', 'Esta conta está desativada.');
   }
-  if (!profile.companyId && !profile.personalCompanyId && !profile.memberships) {
-    throw new HttpsError('permission-denied', 'A conta não possui vínculo com uma empresa.');
-  }
+  const activeMembership = Object.values(profile.memberships || {}).some(membership =>
+    membership && typeof membership === 'object' && membership.active === true
+  );
+  const hasCompany = typeof profile.companyId === 'string' ||
+    typeof profile.personalCompanyId === 'string' || activeMembership;
+  if (!hasCompany) throw new HttpsError('permission-denied', 'A conta não possui vínculo ativo com uma empresa.');
 }
 
 function validateMessages(messages) {
