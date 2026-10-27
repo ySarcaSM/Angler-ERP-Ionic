@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
+import { GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { getFirebaseAuth, getFirestoreDb } from './firebase';
 import { CompanyMembership, CompanyRole, OperatorGroup, UserProfile } from '../models/erp.models';
@@ -95,6 +95,27 @@ export class AuthService {
     }
     // Invalida leituras iniciadas pelo callback antes deste login para que
     // uma resposta antiga não sobrescreva o perfil recém-verificado.
+    ++this.authRevision;
+    this.userSubject.next(credential.user);
+    this.profileSubject.next(profile);
+    this.resolveReady();
+    await this.router.navigateByUrl('/home');
+  }
+
+  async signInWithGoogle(): Promise<void> {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const credential = await signInWithPopup(getFirebaseAuth(), provider);
+    const profile = await this.loadProfile(credential.user);
+
+    if (getFirebaseAuth().currentUser?.uid !== credential.user.uid) {
+      throw new Error('A sessão foi alterada durante o login. Tente novamente.');
+    }
+    if (!profile?.companyId) {
+      await signOut(getFirebaseAuth());
+      throw new Error('Não foi possível identificar sua empresa principal para esta conta Google. Use uma conta vinculada à sua empresa ou peça ao administrador para configurar o vínculo.');
+    }
+
     ++this.authRevision;
     this.userSubject.next(credential.user);
     this.profileSubject.next(profile);
