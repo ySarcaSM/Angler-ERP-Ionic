@@ -34,7 +34,7 @@
           @for (message of activeChat.messages; track message.createdAt) {
             <article class="message-row" [class.user-message]="message.role === 'user'">
               <div class="message-avatar"><ion-icon [name]="message.role === 'assistant' ? 'sparkles-outline' : 'person-outline'"></ion-icon></div>
-              <div class="message-body"><span class="message-author">{{ message.role === 'assistant' ? 'Angler IA' : 'Você' }}</span><div class="message-content" [innerHTML]="formatMessage(message.content)"></div></div>
+              <div class="message-body"><span class="message-author">{{ message.role === 'assistant' ? 'Angler IA' : 'Você' }}</span>@if (message.role === 'assistant') { <div class="message-content" [innerHTML]="formatMessage(message.content)"></div> } @else { <div class="message-content">{{ message.content }}</div> }</div>
             </article>
           }
         }
