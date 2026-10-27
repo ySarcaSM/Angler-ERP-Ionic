@@ -1,46 +1,47 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { GeminiAiService, selectFreeGeminiModels } from './gemini-ai.service';
+import { GeminiAiService } from './gemini-ai.service';
 
-describe('Gemini free-tier model selection', () => {
+function streamResponse(text: string): Response {
+  const chunks = text.match(/.{1,5}/g) ?? [text];
+  const body = chunks.map(chunk => `data: ${JSON.stringify({
+    candidates: [{ content: { parts: [{ text: chunk }] } }]
+  })}\n\n`).join('');
+  return new Response(body, {
+    status: 200,
+    headers: { 'Content-Type': 'text/event-stream' }
+  });
+}
+
+describe('GeminiAiService', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('accepts only supported models from the explicit free-tier allowlist', () => {
-    expect(selectFreeGeminiModels([
-      { name: 'models/gemini-3.1-pro-preview', supportedGenerationMethods: ['generateContent'] },
-      { name: 'models/gemini-3.1-flash-image', supportedGenerationMethods: ['generateContent'] },
-      { name: 'models/gemini-3.6-flash', supportedGenerationMethods: ['generateContent'] },
-      { name: 'models/gemini-3.8-flash', supportedGenerationMethods: ['generateContent'] },
-      { name: 'models/gemini-3.5-flash-lite', supportedGenerationMethods: ['generateContent'] },
-      { name: 'models/gemini-embedding', supportedGenerationMethods: ['embedContent'] }
-    ])).toEqual(['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite']);
-  });
-
-  it('tests the preferred free model and falls back only to another free model', async () => {
+  it('uses streamed responses and reuses the first working free model', async () => {
     const urls: string[] = [];
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       urls.push(url);
-      if (url.endsWith('/models')) {
-        return {
-          ok: true,
-          json: async () => ({ models: [
-            { name: 'models/gemini-3.8-flash', supportedGenerationMethods: ['generateContent'] },
-            { name: 'models/gemini-3.6-flash', supportedGenerationMethods: ['generateContent'] },
-            { name: 'models/gemini-3.1-pro-preview', supportedGenerationMethods: ['generateContent'] }
-          ] })
-        } as Response;
-      }
       if (url.includes('/gemini-3.8-flash:')) {
-        return { ok: false, status: 503, statusText: 'Unavailable', json: async () => ({ error: { message: 'unavailable' } }) } as Response;
+        return new Response(JSON.stringify({ error: { message: 'unavailable' } }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
-      return {
-        ok: true,
-        json: async () => ({ candidates: [{ content: { parts: [{ text: 'OK' }] } }] })
-      } as Response;
+      return streamResponse('Resposta rápida');
     });
     vi.stubGlobal('fetch', fetchMock);
-    const result = await new GeminiAiService().test();
-    expect(result.modelId).toBe('gemini-3.6-flash');
-    expect(urls.some(url => url.includes('gemini-3.1-pro-preview'))).toBe(false);
+    const service = new GeminiAiService();
+    const received: string[] = [];
+
+    const first = await service.generate([{ role: 'user', content: 'Oi' }], text => received.push(text));
+    const second = await service.generate([{ role: 'user', content: 'Tudo bem?' }]);
+
+    expect(first).toBe('Resposta rápida');
+    expect(second).toBe('Resposta rápida');
+    expect(received.length).toBeGreaterThan(1);
+    expect(urls.every(url => url.includes(':streamGenerateContent?alt=sse'))).toBe(true);
+    expect(urls.some(url => url.includes('/models?'))).toBe(false);
+    expect(urls[1]).toContain('gemini-3.6-flash');
+    expect(urls[2]).toContain('gemini-3.6-flash');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });
