@@ -6,13 +6,10 @@ import { vi } from 'vitest';
 import { AuthService } from './auth.service';
 
 vi.mock('firebase/auth', () => ({
+  getAuth: () => ({ currentUser: null }),
   onAuthStateChanged: vi.fn(),
   signInWithEmailAndPassword: vi.fn(),
   signOut: vi.fn()
-}));
-vi.mock('./firebase', () => ({
-  getFirebaseAuth: () => ({ currentUser: null }),
-  getFirestoreDb: vi.fn()
 }));
 
 @Component({
