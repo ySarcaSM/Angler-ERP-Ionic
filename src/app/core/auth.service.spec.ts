@@ -19,17 +19,17 @@ vi.mock('./firebase', () => ({
   standalone: true,
   template: '{{ auth.profile?.role || "loading" }}'
 })
-class AuthStateHost {
+class AuthStateHostComponent {
   readonly auth = inject(AuthService);
 }
 
 describe('AuthService template reactivity', () => {
   it('updates delayed profile and logout without navigation or manual change detection', async () => {
     TestBed.configureTestingModule({
-      imports: [AuthStateHost],
+      imports: [AuthStateHostComponent],
       providers: [{ provide: Router, useValue: { navigateByUrl: vi.fn() } }]
     });
-    const fixture = TestBed.createComponent(AuthStateHost);
+    const fixture = TestBed.createComponent(AuthStateHostComponent);
     const auth = TestBed.inject(AuthService);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent.trim()).toBe('loading');
