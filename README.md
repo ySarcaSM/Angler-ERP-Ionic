@@ -16,7 +16,7 @@ ERP frontend built with **Ionic + Angular + TypeScript**, using Angular **NgModu
 4. Enable Email/Password in Firebase Authentication.
 5. For every authorized user, create a `users/{uid}` document with `companyId` and `role`. Supported roles: `owner`, `admin`, `operator`, `viewer`.
 6. Publish `firestore.rules` to the Firestore database.
-7. Set up the Gemini backend (steps below) and run `npm start`.
+7. Configure Gemini (steps below) and run `npm start`.
 
 Example user profile (create through Firebase Console or a trusted administrative environment):
 
@@ -27,23 +27,21 @@ Example user profile (create through Firebase Console or a trusted administrativ
 }
 ```
 
-## Gemini Assistant
+## Gemini Assistant (sem serviços pagos)
 
-The Ionic assistant uses only Google Gemini. The API key never enters the browser bundle: local development reads it from `functions/.env`, while production reads it from Firebase Secret Manager. The backend lists the models available to the key, tests candidates in priority order, and falls back if a model is unavailable.
+O assistente usa diretamente a Gemini Developer API pelo app Ionic e limita os modelos a uma lista explícita da faixa gratuita. Não usa Cloud Functions nem exige plano Blaze. Para manter a conta sem cobranças, crie a chave em um projeto sem conta de faturamento vinculada; não habilite a faixa paga. A API gratuita tem limites de uso e pode recusar solicitações ao atingir esses limites.
 
-### Local development
+### Configuração local
 
-1. Copy `functions/.env.example` to `functions/.env` and set `GEMINI_API_KEY` to a Gemini API key from Google AI Studio. Do not commit `functions/.env`.
-2. Start the Functions emulator in one terminal: `firebase emulators:start --only functions --project YOUR_FIREBASE_PROJECT_ID`.
-3. Start Ionic in another terminal: `npm start`.
+1. Copie `.env.example` para `.env` e preencha `GEMINI_API_KEY` com uma chave criada no Google AI Studio.
+2. Rode `npm start` ou `npm run build`; os scripts carregam a chave do `.env` durante a compilação.
+3. O assistente testa a API ao abrir, tenta primeiro o modelo gratuito prioritário e segue para outros modelos gratuitos compatíveis se ele falhar.
 
-### Production deployment
+### Chave e privacidade
 
-1. Select the same Firebase project used by the Ionic app. Cloud Functions deployment requires a Firebase project with billing enabled.
-2. Set the key through Firebase Secret Manager: `firebase functions:secrets:set GEMINI_API_KEY --project YOUR_FIREBASE_PROJECT_ID`. Enter the key at the CLI prompt; do not put it in the command or repository.
-3. Deploy only the function from this repository: `firebase deploy --only functions --project YOUR_FIREBASE_PROJECT_ID`.
+A chave nunca é salva no Firestore nem no Git, mas é incorporada ao JavaScript compilado e pode ser extraída por qualquer pessoa que tenha acesso ao app publicado. Restrinja a chave à Gemini API e aos domínios do Ionic Web App no Google Cloud Console; não reutilize a chave em outros sistemas.
 
-The callable function requires Firebase Authentication and an active user profile. The frontend sends only the chat prompt and context; it never receives the Gemini key.
+As mensagens e o contexto de clientes/produtos usados na resposta são enviados à Google. No nível gratuito, os dados podem ser usados para melhorar produtos Google; não envie informações pessoais ou confidenciais. A lista de modelos permitidos evita solicitar modelos pagos, mas a conta da API também precisa permanecer sem faturamento vinculado para garantir que o projeto não entre na faixa paga.
 
 ## Routes
 
