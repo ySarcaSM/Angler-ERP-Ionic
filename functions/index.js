@@ -52,8 +52,15 @@ function validateMessages(messages) {
   return normalized;
 }
 
+const isFunctionsEmulator = process.env.FUNCTIONS_EMULATOR === 'true';
+const callableOptions = {
+  ...(isFunctionsEmulator ? {} : { secrets: [geminiApiKey] }),
+  timeoutSeconds: 120,
+  memory: '512MiB'
+};
+
 exports.geminiAssistant = onCall(
-  { secrets: [geminiApiKey], timeoutSeconds: 120, memory: '512MiB' },
+  callableOptions,
   async request => {
     if (!request.auth) throw new HttpsError('unauthenticated', 'Entre no Angler ERP antes de usar o assistente.');
     try {
