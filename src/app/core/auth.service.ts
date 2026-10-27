@@ -25,7 +25,10 @@ export class AuthService {
   private readonly router = inject(Router);
 
   constructor() {
-    onAuthStateChanged(getFirebaseAuth(), async user => {
+    onAuthStateChanged(getFirebaseAuth(), async firebaseUser => {
+      // O callback inicial pode ter sido agendado antes do login explícito.
+      // Sempre reconcilie com a sessão que o Firebase tem neste momento.
+      const user = firebaseUser ?? getFirebaseAuth().currentUser;
       const revision = ++this.authRevision;
 
       if (!user) {
@@ -86,8 +89,12 @@ export class AuthService {
       await signOut(getFirebaseAuth());
       throw new Error('Não foi possível identificar sua empresa principal. Se sua conta tiver mais de um vínculo ativo, solicite ao administrador que mantenha apenas o vínculo correto ou defina sua empresa principal.');
     }
+    // Invalida leituras iniciadas pelo callback antes deste login para que
+    // uma resposta antiga não sobrescreva o perfil recém-verificado.
+    ++this.authRevision;
     this.userSubject.next(credential.user);
     this.profileSubject.next(profile);
+    this.resolveReady();
     await this.router.navigateByUrl('/home');
   }
 
