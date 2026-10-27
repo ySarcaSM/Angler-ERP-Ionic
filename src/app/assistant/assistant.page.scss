@@ -2,7 +2,7 @@
 .assistant-toolbar { --background:var(--ion-background-color); --border-color:var(--ion-color-light-shade); }
 .assistant-toolbar ion-title { display:flex; align-items:center; gap:10px; font-weight:700; }
 .assistant-toolbar ion-title ion-icon { color:var(--ion-color-primary); }
-.assistant-content { --background:var(--ion-background-color); }
+.assistant-content { --background:var(--ion-background-color); --padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 12px); }
 .assistant-layout { display:grid; grid-template-columns:280px minmax(0,1fr); min-height:100%; max-width:1600px; margin:0 auto; }
 .chat-sidebar { padding:22px 16px; border-right:1px solid var(--ion-color-light-shade); display:flex; flex-direction:column; gap:16px; background:var(--ion-card-background,var(--ion-background-color)); }
 .chat-sidebar > ion-button { --border-radius:12px; font-weight:650; }
@@ -17,7 +17,7 @@
 .sidebar-note { margin-top:auto; display:flex; gap:8px; color:var(--ion-color-medium); font-size:11px; line-height:1.5; padding:12px 4px; }
 .sidebar-note ion-icon { flex-shrink:0; font-size:17px; }
 .conversation-area { display:flex; flex-direction:column; min-width:0; min-height:calc(100vh - 56px); padding:22px clamp(16px,3vw,44px) 18px; }
-.messages { flex:1; width:100%; max-width:900px; margin:0 auto; padding:16px 0 28px; }
+.messages { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; width:100%; max-width:900px; margin:0 auto; padding:16px 0 28px; }
 .welcome-state { min-height:420px; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:28px; }
 .ai-mark { width:56px; height:56px; display:grid; place-items:center; border-radius:18px; background:var(--ion-color-primary-tint); color:var(--ion-color-primary); font-size:27px; }
 .welcome-state h1 { font-size:clamp(23px,3vw,32px); margin:20px 0 8px; }
@@ -44,7 +44,7 @@
 .message-content a { color:var(--ion-color-primary); text-decoration:underline; }
 .message-content hr { border:0; border-top:1px solid var(--ion-color-light-shade); margin:12px 0; }
 .thinking { display:flex; align-items:center; gap:10px; padding:12px; color:var(--ion-color-medium); font-size:12px; }
-.composer { width:100%; max-width:900px; margin:0 auto; border:1px solid var(--ion-color-light-shade); border-radius:16px; padding:10px 12px; background:var(--ion-card-background,var(--ion-background-color)); box-shadow:0 6px 24px #0000000a; }
+.composer { position:sticky; bottom:calc(env(safe-area-inset-bottom, 0px) + 12px); z-index:5; flex:0 0 auto; width:100%; max-width:900px; margin:0 auto; border:1px solid var(--ion-color-light-shade); border-radius:16px; padding:10px 12px; background:var(--ion-card-background,var(--ion-background-color)); box-shadow:0 6px 24px #0000000a; }
 .composer textarea { display:block; width:100%; resize:vertical; border:0; outline:0; padding:8px 6px; color:var(--ion-text-color); background:transparent; font:inherit; line-height:1.5; }
 .composer-footer { display:flex; justify-content:space-between; align-items:center; gap:10px; color:var(--ion-color-medium); font-size:10px; }
 .composer-footer ion-button { --border-radius:10px; }
