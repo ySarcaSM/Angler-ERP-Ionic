@@ -20,7 +20,7 @@ export class GeminiAiService {
 
   async generate(messages: GeminiMessage[], onText?: (text: string) => void): Promise<string> {
     const key = GEMINI_API_KEY.trim();
-    if (!key || key.startsWith('COLE_') || key === 'CI_NO_API_KEY') {
+    if (!key || key.startsWith('COLE_')) {
       throw new Error('Defina GEMINI_API_KEY no arquivo .env e reinicie o app.');
     }
 
