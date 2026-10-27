@@ -46,6 +46,25 @@ export class GeminiAiService {
       : new Error('Não foi possível concluir a solicitação ao Gemini.');
   }
 
+  private async fetchWithRetry(url: string, options: RequestInit): Promise<Response> {
+    const transientStatuses = new Set([429, 500, 502, 503, 504]);
+    let lastError: unknown;
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const response = await fetch(url, options);
+        if (!transientStatuses.has(response.status) || attempt === 2) return response;
+      } catch (error) {
+        lastError = error;
+        if (attempt === 2) throw error;
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 500 * (2 ** attempt)));
+    }
+
+    throw lastError instanceof Error ? lastError : new Error('O Gemini está temporariamente indisponível.');
+  }
+
   private async streamModel(
     key: string,
     modelId: string,
@@ -59,7 +78,7 @@ export class GeminiAiService {
       role: message.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: message.content }]
     }));
-    const response = await fetch(
+    const response = await this.fetchWithRetry(
       `${GEMINI_API}/models/${encodeURIComponent(modelId)}:streamGenerateContent?alt=sse`,
       {
         method: 'POST',
