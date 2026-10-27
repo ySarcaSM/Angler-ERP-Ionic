@@ -16,7 +16,7 @@ export interface GeminiMessage {
 
 @Injectable({ providedIn: 'root' })
 export class GeminiAiService {
-  private selectedModelId = FREE_MODEL_FALLBACKS[0];
+  private selectedModelId: typeof FREE_MODEL_FALLBACKS[number] = FREE_MODEL_FALLBACKS[0];
 
   async generate(messages: GeminiMessage[], onText?: (text: string) => void): Promise<string> {
     const key = GEMINI_API_KEY.trim();
