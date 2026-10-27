@@ -14,7 +14,7 @@
 .chat-select ion-icon { flex-shrink:0; color:var(--ion-color-medium); }
 .chat-select span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; }
 .chat-item ion-button { margin:0; --padding-start:5px; --padding-end:5px; }
-.sidebar-note { margin-top:auto; display:flex; gap:8px; color:var(--ion-color-medium); font-size:11px; line-height:1.5; padding:12px 4px; }
+.sidebar-note { margin-top:auto; margin-bottom:56px; display:flex; gap:8px; color:var(--ion-color-medium); font-size:11px; line-height:1.5; padding:12px 4px; }
 .sidebar-note ion-icon { flex-shrink:0; font-size:17px; }
 .conversation-area { display:flex; flex-direction:column; min-width:0; min-height:calc(100vh - 56px); padding:22px clamp(16px,3vw,44px) 18px; }
 .messages { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; width:100%; max-width:900px; margin:0 auto; padding:16px 0 28px; }
@@ -48,7 +48,7 @@
 .composer textarea { display:block; width:100%; resize:vertical; border:0; outline:0; padding:8px 6px; color:var(--ion-text-color); background:transparent; font:inherit; line-height:1.5; }
 .composer-footer { display:flex; justify-content:space-between; align-items:center; gap:10px; color:var(--ion-color-medium); font-size:10px; }
 .composer-footer ion-button { --border-radius:10px; }
-@media(max-width:800px) { .assistant-layout { grid-template-columns:1fr; } .chat-sidebar { border-right:0; border-bottom:1px solid var(--ion-color-light-shade); padding:12px; } .chat-sidebar > ion-button { max-width:220px; } .chat-list { flex-direction:row; overflow-x:auto; } .chat-item { min-width:190px; border:1px solid var(--ion-color-light-shade); } .sidebar-note { margin-top:0; } .conversation-area { min-height:calc(100vh - 220px); padding:12px; } }
+@media(max-width:800px) { .assistant-layout { grid-template-columns:1fr; } .chat-sidebar { border-right:0; border-bottom:1px solid var(--ion-color-light-shade); padding:12px; } .chat-sidebar > ion-button { max-width:220px; } .chat-list { flex-direction:row; overflow-x:auto; } .chat-item { min-width:190px; border:1px solid var(--ion-color-light-shade); } .sidebar-note { margin-top:0; margin-bottom:44px; } .conversation-area { min-height:calc(100vh - 220px); padding:12px; } }
 @media(max-width:520px) { .welcome-state { min-height:320px; padding:15px 0; } .composer-footer span { max-width:180px; } }
 
 .privacy-note { margin:0 0 10px; padding:9px 11px; border-left:3px solid var(--ion-color-primary); border-radius:5px; background:var(--ion-color-light-tint); color:var(--ion-color-medium-shade); font-size:11px; line-height:1.5; }
