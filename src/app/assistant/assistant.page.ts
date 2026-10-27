@@ -105,6 +105,132 @@ export class AssistantPage implements OnInit {
     } finally { this.loading = false; this.cdr.markForCheck(); }
   }
 
+  formatMessage(source: string): string {
+    const escapeHtml = (value: string): string => value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    const inline = (value: string): string => {
+      const placeholders: string[] = [];
+      const hold = (html: string): string => {
+        const token = '%%ANGHTML' + placeholders.length + '%%';
+        placeholders.push(html);
+        return token;
+      };
+
+      let html = escapeHtml(value);
+      html = html.replace(/\x60([^\x60\n]+)\x60/g, (_match, code: string) => hold('<code>' + code + '</code>'));
+      html = html.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_match, label: string, href: string) => {
+        const safeHref = href.replace(/&amp;/g, '&');
+        if (!/^https?:\/\//i.test(safeHref) && !/^mailto:/i.test(safeHref)) return label;
+        return hold('<a href="' + href + '" target="_blank" rel="noopener noreferrer">' + label + '</a>');
+      });
+      html = html
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/__(.+?)__/g, '<strong>$1</strong>')
+        .replace(/~~(.+?)~~/g, '<del>$1</del>')
+        .replace(/\*([^*\n]+)\*/g, '<em>$1</em>')
+        .replace(/_([^_\n]+)_/g, '<em>$1</em>');
+      return html.replace(/%%ANGHTML(\d+)%%/g, (_match, index: string) => placeholders[Number(index)]);
+    };
+
+    const blocks: string[] = [];
+    const lines = source.replace(/\r\n?/g, '\n').split('\n');
+    let paragraph: string[] = [];
+    let listType: 'ul' | 'ol' | null = null;
+    let quoteLines: string[] = [];
+    let codeLines: string[] | null = null;
+
+    const flushParagraph = (): void => {
+      if (!paragraph.length) return;
+      blocks.push('<p>' + paragraph.join('<br>') + '</p>');
+      paragraph = [];
+    };
+    const closeList = (): void => {
+      if (!listType) return;
+      blocks.push('</' + listType + '>');
+      listType = null;
+    };
+    const flushQuote = (): void => {
+      if (!quoteLines.length) return;
+      blocks.push('<blockquote>' + quoteLines.map(inline).join('<br>') + '</blockquote>');
+      quoteLines = [];
+    };
+
+    for (const line of lines) {
+      if (codeLines) {
+        if (/^\s*\x60\x60\x60/.test(line)) {
+          blocks.push('<pre><code>' + escapeHtml(codeLines.join('\n')) + '</code></pre>');
+          codeLines = null;
+        } else {
+          codeLines.push(line);
+        }
+        continue;
+      }
+      if (/^\s*\x60\x60\x60/.test(line)) {
+        flushParagraph();
+        closeList();
+        flushQuote();
+        codeLines = [];
+        continue;
+      }
+      if (!line.trim()) {
+        flushParagraph();
+        closeList();
+        flushQuote();
+        continue;
+      }
+
+      const heading = line.match(/^(#{1,6})\s+(.+)$/);
+      if (heading) {
+        flushParagraph(); closeList(); flushQuote();
+        const level = heading[1].length;
+        blocks.push('<h' + level + '>' + inline(heading[2]) + '</h' + level + '>');
+        continue;
+      }
+      if (/^\s*(\*\s*){3,}$|^\s*(-\s*){3,}$|^\s*(_\s*){3,}$/.test(line)) {
+        flushParagraph(); closeList(); flushQuote();
+        blocks.push('<hr>');
+        continue;
+      }
+
+      const unordered = line.match(/^\s*[-*+]\s+(.+)$/);
+      const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+      if (unordered || ordered) {
+        flushParagraph(); flushQuote();
+        const nextType = unordered ? 'ul' : 'ol';
+        if (listType !== nextType) {
+          closeList();
+          listType = nextType;
+          blocks.push('<' + listType + '>');
+        }
+        const item = unordered ?? ordered;
+        blocks.push('<li>' + inline(item![1]) + '</li>');
+        continue;
+      }
+
+      const quote = line.match(/^\s*>\s?(.*)$/);
+      if (quote) {
+        flushParagraph(); closeList();
+        quoteLines.push(quote[1]);
+        continue;
+      }
+
+      closeList();
+      flushQuote();
+      paragraph.push(inline(line));
+    }
+
+    flushParagraph();
+    closeList();
+    flushQuote();
+    if (codeLines) blocks.push('<pre><code>' + escapeHtml(codeLines.join('\n')) + '</code></pre>');
+    return blocks.join('');
+  }
+
   private async buildBusinessContext(prompt: string): Promise<string> {
     const lower = prompt.toLocaleLowerCase('pt-BR');
     const wantsClients = /cliente|clientes|contato|contatos|comprador/.test(lower);
