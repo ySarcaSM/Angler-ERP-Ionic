@@ -2,7 +2,7 @@ import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, User } from 'firebase/auth';
+import { getAdditionalUserInfo, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { getFirebaseAuth, getFirestoreDb } from './firebase';
 import { CompanyMembership, CompanyRole, OperatorGroup, UserProfile } from '../models/erp.models';
@@ -106,6 +106,7 @@ export class AuthService {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     const credential = await signInWithPopup(getFirebaseAuth(), provider);
+    const isNewGoogleAccount = getAdditionalUserInfo(credential)?.isNewUser === true;
     const profile = await this.loadProfile(credential.user);
 
     if (getFirebaseAuth().currentUser?.uid !== credential.user.uid) {
@@ -113,6 +114,9 @@ export class AuthService {
     }
     if (!profile?.companyId) {
       await signOut(getFirebaseAuth());
+      if (isNewGoogleAccount) {
+        throw new Error('Esta conta Google ainda não está cadastrada no AnglerERP. Crie sua conta em angler-erp.vercel.app e depois entre novamente.');
+      }
       throw new Error('Não foi possível identificar sua empresa principal para esta conta Google. Use uma conta vinculada à sua empresa ou peça ao administrador para configurar o vínculo.');
     }
 
