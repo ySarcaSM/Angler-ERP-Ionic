@@ -1,4 +1,4 @@
-import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, inject, OnInit, ViewChild } from '@angular/core';
 import { AuthService } from '../core/auth.service';
 import { ClientsService } from '../services/clients.service';
 import { ProductsService } from '../services/products.service';
@@ -19,6 +19,8 @@ export class AssistantPage implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
 
   private readonly gemini = inject(GeminiAiService);
+  @ViewChild('messagesContainer') private messagesContainer?: ElementRef<HTMLElement>;
+  private shouldAutoScroll = true;
   chats: ChatThread[] = [];
   activeChatId = '';
   draft = '';
@@ -31,6 +33,21 @@ export class AssistantPage implements OnInit {
   }
 
   get activeChat(): ChatThread | undefined { return this.chats.find(chat => chat.id === this.activeChatId); }
+
+  onMessagesScroll(): void {
+    const element = this.messagesContainer?.nativeElement;
+    if (!element) return;
+    this.shouldAutoScroll = element.scrollHeight - element.scrollTop - element.clientHeight < 80;
+  }
+
+  private scrollMessagesToBottom(force = false): void {
+    if (force) this.shouldAutoScroll = true;
+    requestAnimationFrame(() => {
+      const element = this.messagesContainer?.nativeElement;
+      if (!element || (!force && !this.shouldAutoScroll)) return;
+      element.scrollTop = element.scrollHeight;
+    });
+  }
 
   newChat(): void {
     const now = Date.now();
@@ -67,6 +84,7 @@ export class AssistantPage implements OnInit {
     chat.messages.push({ role: 'user', content: prompt, createdAt: Date.now() });
     if (chat.messages.length === 1 && chat.title === 'Nova conversa') chat.title = prompt.slice(0, 42) + (prompt.length > 42 ? '…' : '');
     chat.updatedAt = Date.now(); this.saveChats(); this.loading = true;
+    this.scrollMessagesToBottom(true);
     let assistantMessage: ChatMessage | undefined;
     try {
       const context = await this.buildBusinessContext(prompt);
@@ -92,9 +110,11 @@ export class AssistantPage implements OnInit {
       assistantMessage = { role: 'assistant', content: '', createdAt: Date.now() };
       chat.messages.push(assistantMessage);
       this.cdr.markForCheck();
+      this.scrollMessagesToBottom(true);
       await this.gemini.generate([{ role: 'system', content: system }, ...history], text => {
         assistantMessage!.content = text;
         this.cdr.markForCheck();
+        this.scrollMessagesToBottom();
       });
       chat.updatedAt = Date.now(); this.saveChats();
     } catch (error) {
@@ -102,7 +122,7 @@ export class AssistantPage implements OnInit {
       if (assistantMessage) assistantMessage.content = failure;
       else chat.messages.push({ role: 'assistant', content: failure, createdAt: Date.now() });
       this.saveChats();
-    } finally { this.loading = false; this.cdr.markForCheck(); }
+    } finally { this.loading = false; this.cdr.markForCheck(); this.scrollMessagesToBottom(); }
   }
 
   formatMessage(source: string): string {
