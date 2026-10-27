@@ -37,7 +37,7 @@
             </ion-button>
           </div>
           @if (status) { <p class="connection-status" role="status">{{ status }}</p> }
-          <p class="privacy-note"><ion-icon name="shield-checkmark-outline"></ion-icon> A chave Gemini não é incluída no app. As mensagens e os dados empresariais usados como contexto são enviados ao Gemini pelo backend Firebase para gerar a resposta.</p>
+          <p class="privacy-note"><ion-icon name="shield-checkmark-outline"></ion-icon> A chave vem do .env e é incluída no app publicado, então pode ser extraída. A lista de modelos é limitada à faixa gratuita. Mensagens e contexto empresarial vão para Google Gemini; no nível gratuito, a Google pode usar esses dados para melhorar seus produtos. Não envie dados pessoais ou confidenciais.</p>
         </section>
       }
 
