@@ -107,16 +107,27 @@ export class AuthService {
     provider.setCustomParameters({ prompt: 'select_account' });
     const credential = await signInWithPopup(getFirebaseAuth(), provider);
     const isNewGoogleAccount = getAdditionalUserInfo(credential)?.isNewUser === true;
+
+    if (isNewGoogleAccount) {
+      ++this.authRevision;
+      this.userSubject.next(null);
+      this.profileSubject.next(null);
+      this.resolveReady();
+      await signOut(getFirebaseAuth());
+      throw new Error('Esta conta Google ainda não está cadastrada no AnglerERP. Crie sua conta em angler-erp.vercel.app e depois entre novamente.');
+    }
+
     const profile = await this.loadProfile(credential.user);
 
     if (getFirebaseAuth().currentUser?.uid !== credential.user.uid) {
       throw new Error('A sessão foi alterada durante o login. Tente novamente.');
     }
     if (!profile?.companyId) {
+      ++this.authRevision;
+      this.userSubject.next(null);
+      this.profileSubject.next(null);
+      this.resolveReady();
       await signOut(getFirebaseAuth());
-      if (isNewGoogleAccount) {
-        throw new Error('Esta conta Google ainda não está cadastrada no AnglerERP. Crie sua conta em angler-erp.vercel.app e depois entre novamente.');
-      }
       throw new Error('Não foi possível identificar sua empresa principal para esta conta Google. Use uma conta vinculada à sua empresa ou peça ao administrador para configurar o vínculo.');
     }
 
