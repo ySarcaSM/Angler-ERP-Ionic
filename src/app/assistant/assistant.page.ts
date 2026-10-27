@@ -156,7 +156,7 @@ export class AssistantPage implements OnInit {
     } catch { this.chats = []; }
   }
   private saveChats(): void {
-    try { localStorage.setItem(this.storageKey, JSON.stringify(this.chats)); } catch { this.status = 'Não foi possível salvar as conversas neste navegador.'; }
+    try { localStorage.setItem(this.storageKey, JSON.stringify(this.chats)); } catch { console.warn('Não foi possível salvar as conversas neste navegador.'); }
   }
   private makeId(): string { return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`; }
   private message(error: unknown): string { return error instanceof Error ? error.message : 'Erro desconhecido.'; }
