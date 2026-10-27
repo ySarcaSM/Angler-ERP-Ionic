@@ -13,7 +13,9 @@
     "prestart": "node scripts/load-env.mjs",
     "prebuild": "node scripts/load-env.mjs",
     "pretest": "node scripts/load-env.mjs --optional",
-    "prelint": "node scripts/load-env.mjs --optional"
+    "prelint": "node scripts/load-env.mjs --optional",
+    "ionic:serve:before": "node scripts/load-env.mjs",
+    "ionic:build:before": "node scripts/load-env.mjs"
   },
   "private": true,
   "dependencies": {
