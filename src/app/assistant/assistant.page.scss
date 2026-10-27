@@ -44,7 +44,7 @@
 .message-content a { color:var(--ion-color-primary); text-decoration:underline; }
 .message-content hr { border:0; border-top:1px solid var(--ion-color-light-shade); margin:12px 0; }
 .thinking { display:flex; align-items:center; gap:10px; padding:12px; color:var(--ion-color-medium); font-size:12px; }
-.composer { position:sticky; bottom:calc(env(safe-area-inset-bottom, 0px) + 12px); z-index:5; flex:0 0 auto; width:100%; max-width:900px; margin:0 auto; border:1px solid var(--ion-color-light-shade); border-radius:16px; padding:10px 12px; background:var(--ion-card-background,var(--ion-background-color)); box-shadow:0 6px 24px #0000000a; }
+.composer { position:sticky; bottom:calc(env(safe-area-inset-bottom, 0px) + 12px); z-index:5; flex:0 0 auto; width:100%; max-width:900px; margin:0 auto calc(56px + env(safe-area-inset-bottom, 0px)); border:1px solid var(--ion-color-light-shade); border-radius:16px; padding:10px 12px; background:var(--ion-card-background,var(--ion-background-color)); box-shadow:0 6px 24px #0000000a; }
 .composer textarea { display:block; width:100%; resize:vertical; border:0; outline:0; padding:8px 6px; color:var(--ion-text-color); background:transparent; font:inherit; line-height:1.5; }
 .composer-footer { display:flex; justify-content:space-between; align-items:center; gap:10px; color:var(--ion-color-medium); font-size:10px; }
 .composer-footer ion-button { --border-radius:10px; }
