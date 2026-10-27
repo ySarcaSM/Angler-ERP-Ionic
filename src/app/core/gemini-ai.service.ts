@@ -129,7 +129,7 @@ export class GeminiAiService {
         ];
         return this.streamModel(key, modelId, continuationMessages, onText, completeAnswer, continuation + 1);
       }
-      const notice = '\\n\\n[Resposta interrompida ao atingir o limite de geração. Peça “continue” para prosseguir.]';
+      const notice = '\n\n[Resposta interrompida ao atingir o limite de geração. Peça “continue” para prosseguir.]';
       onText?.(completeAnswer + notice);
       return completeAnswer + notice;
     }
