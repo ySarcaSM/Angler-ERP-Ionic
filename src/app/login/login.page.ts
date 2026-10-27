@@ -15,6 +15,23 @@ export class LoginPage {
 
   private readonly auth = inject(AuthService);
 
+  async signInWithGoogle(): Promise<void> {
+    this.error = '';
+    this.loading = true;
+    try {
+      await this.auth.signInWithGoogle();
+    } catch (error) {
+      const code = (error as { code?: string })?.code;
+      this.error = code === 'auth/popup-closed-by-user'
+        ? 'A janela de login do Google foi fechada.'
+        : code === 'auth/popup-blocked'
+          ? 'O navegador bloqueou a janela do Google. Permita pop-ups e tente novamente.'
+          : error instanceof Error ? error.message : 'Não foi possível entrar com o Google.';
+    } finally {
+      this.loading = false;
+    }
+  }
+
   async submit(): Promise<void> {
     this.error = '';
     if (!this.email.trim() || !this.password) {

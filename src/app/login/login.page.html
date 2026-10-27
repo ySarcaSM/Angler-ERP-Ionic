@@ -27,6 +27,11 @@
             <ion-icon slot="end" name="arrow-forward-outline"></ion-icon>
           </ion-button>
         </form>
+          <div class="login-divider"><span>ou</span></div>
+          <ion-button type="button" expand="block" fill="outline" class="google-button" (click)="signInWithGoogle()" [disabled]="loading">
+            <ion-icon slot="start" name="logo-google"></ion-icon>
+            {{ loading ? 'Conectando...' : 'Continuar com Google' }}
+          </ion-button>
         <p class="security-note"><ion-icon name="shield-checkmark-outline"></ion-icon> Acesso protegido por Firebase Authentication.</p>
       </div>
     </section>
