@@ -31,7 +31,7 @@
             <div class="suggestion-list"><button (click)="draft = 'Quais são os meus clientes?'; send()">Listar meus clientes</button><button (click)="draft = 'Faça um relatório dos melhores produtos considerando preço e estoque.'; send()">Analisar meus produtos</button><button (click)="draft = 'Quantas mochilas de 20x30x15 cabem em um plano de 262x150? Explique as premissas.'; send()">Calcular aproveitamento de material</button></div>
           </div>
         } @else {
-          @for (message of activeChat?.messages; track message.createdAt) {
+          @for (message of activeChat.messages; track message.createdAt) {
             <article class="message-row" [class.user-message]="message.role === 'user'">
               <div class="message-avatar"><ion-icon [name]="message.role === 'assistant' ? 'sparkles-outline' : 'person-outline'"></ion-icon></div>
               <div class="message-body"><span class="message-author">{{ message.role === 'assistant' ? 'Angler IA' : 'Você' }}</span><p>{{ message.content }}</p></div>
