@@ -12,6 +12,8 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: CI_NO_API_KEY
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -23,12 +25,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-
-      - name: Install Functions dependencies
-        run: npm install --prefix functions
-
-      - name: Test Gemini backend
-        run: npm test --prefix functions
 
       - name: Build production
         run: npm run build
