@@ -15,7 +15,8 @@ try {
 }
 
 const apiKey = process.env.GEMINI_API_KEY || fileKey;
-if (!apiKey && process.env.CI !== 'true') {
+const optional = process.argv.includes('--optional');
+if (!apiKey && process.env.CI !== 'true' && !optional) {
   throw new Error('GEMINI_API_KEY ausente. Copie .env.example para .env e configure sua chave.');
 }
 const output = path.join(root, 'src/app/core/gemini-key.generated.ts');
