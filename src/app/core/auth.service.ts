@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { getFirebaseAuth, getFirestoreDb } from './firebase';
@@ -18,6 +19,9 @@ export class AuthService {
   private readonly profileSubject = new BehaviorSubject<UserProfile | null>(null);
   readonly user$ = this.userSubject.asObservable();
   readonly profile$ = this.profileSubject.asObservable();
+  // Signals notify Angular templates when Firebase finishes outside a UI event.
+  private readonly userState = toSignal(this.user$, { initialValue: null });
+  private readonly profileState = toSignal(this.profile$, { initialValue: null });
   private resolveReady!: () => void;
   private readonly readyPromise = new Promise<void>(resolve => this.resolveReady = resolve);
   private authRevision = 0;
@@ -64,10 +68,10 @@ export class AuthService {
     });
   }
 
-  get currentUser(): User | null { return this.userSubject.value; }
+  get currentUser(): User | null { return this.userState(); }
   get profile(): UserProfile | null {
-    const profile = this.profileSubject.value;
-    return profile?.uid === this.userSubject.value?.uid ? profile : null;
+    const profile = this.profileState();
+    return profile?.uid === this.userState()?.uid ? profile : null;
   }
   get companyId(): string | null { return this.profile?.companyId ?? null; }
   get role(): CompanyRole { return this.profile?.role ?? 'viewer'; }
