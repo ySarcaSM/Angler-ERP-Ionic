@@ -39,3 +39,5 @@
 .composer-footer ion-button { --border-radius:10px; }
 @media(max-width:800px) { .assistant-layout { grid-template-columns:1fr; } .chat-sidebar { border-right:0; border-bottom:1px solid var(--ion-color-light-shade); padding:12px; } .chat-sidebar > ion-button { max-width:220px; } .chat-list { flex-direction:row; overflow-x:auto; } .chat-item { min-width:190px; border:1px solid var(--ion-color-light-shade); } .sidebar-note { margin-top:0; } .conversation-area { min-height:calc(100vh - 220px); padding:12px; } }
 @media(max-width:520px) { .welcome-state { min-height:320px; padding:15px 0; } .composer-footer span { max-width:180px; } }
+
+.privacy-note { margin:10px 6px 2px; color:var(--ion-color-medium); font-size:10px; line-height:1.45; }
