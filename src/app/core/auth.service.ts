@@ -48,6 +48,14 @@ export class AuthService {
       const profile = await this.loadProfile(user);
       if (revision !== this.authRevision || getFirebaseAuth().currentUser?.uid !== user.uid) return;
 
+      // O login explícito pode terminar enquanto esta leitura do callback ainda
+      // está em andamento. Nesse caso, não sobrescreva o perfil válido com um
+      // resultado vazio ou antigo da leitura iniciada primeiro.
+      if (this.profile?.uid === user.uid) {
+        this.resolveReady();
+        return;
+      }
+
       this.profileSubject.next(profile);
       this.resolveReady();
     });
