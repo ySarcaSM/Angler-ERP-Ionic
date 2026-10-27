@@ -25,7 +25,7 @@
     </aside>
 
     <main class="conversation-area">
-      <section class="messages" aria-live="polite">
+      <section class="messages" #messagesContainer (scroll)="onMessagesScroll()" aria-live="polite">
         @if (!activeChat?.messages?.length) {
           <div class="welcome-state"><div class="ai-mark"><ion-icon name="sparkles-outline"></ion-icon></div><h1>O que vamos resolver hoje?</h1><p>Consulte clientes, compare produtos, gere relatórios ou faça cálculos para sua operação.</p>
             <div class="suggestion-list"><button (click)="draft = 'Quais são os meus clientes?'; send()">Listar meus clientes</button><button (click)="draft = 'Faça um relatório dos melhores produtos considerando preço e estoque.'; send()">Analisar meus produtos</button><button (click)="draft = 'Quantas mochilas de 20x30x15 cabem em um plano de 262x150? Explique as premissas.'; send()">Calcular aproveitamento de material</button></div>

@@ -50,7 +50,9 @@ export class GeminiAiService {
     key: string,
     modelId: string,
     messages: GeminiMessage[],
-    onText?: (text: string) => void
+    onText?: (text: string) => void,
+    prefix = '',
+    continuation = 0
   ): Promise<string> {
     const system = messages.find(message => message.role === 'system');
     const contents = messages.filter(message => message.role !== 'system').map(message => ({
@@ -65,7 +67,7 @@ export class GeminiAiService {
         body: JSON.stringify({
           ...(system ? { systemInstruction: { parts: [{ text: system.content }] } } : {}),
           contents,
-          generationConfig: { maxOutputTokens: 2048 }
+          generationConfig: { maxOutputTokens: 4096 }
         })
       }
     );
@@ -80,6 +82,7 @@ export class GeminiAiService {
     const decoder = new TextDecoder();
     let buffer = '';
     let answer = '';
+    let finishReason = '';
 
     const consumeEvent = (event: string): void => {
       const data = event.split('\n')
@@ -90,12 +93,14 @@ export class GeminiAiService {
 
       let payload: any;
       try { payload = JSON.parse(data); } catch { return; }
-      const chunk = (payload.candidates?.[0]?.content?.parts ?? [])
+      const candidate = payload.candidates?.[0];
+      if (candidate?.finishReason) finishReason = candidate.finishReason;
+      const chunk = (candidate?.content?.parts ?? [])
         .map((part: { text?: string }) => part.text ?? '')
         .join('');
       if (!chunk) return;
       answer += chunk;
-      onText?.(answer);
+      onText?.(prefix + answer);
     };
 
     try {
@@ -113,6 +118,21 @@ export class GeminiAiService {
     }
 
     if (!answer) throw new Error('O Gemini não retornou uma resposta de texto.');
-    return answer;
+
+    const completeAnswer = prefix + answer;
+    if (finishReason === 'MAX_TOKENS') {
+      if (continuation < 2) {
+        const continuationMessages: GeminiMessage[] = [
+          ...messages,
+          { role: 'assistant', content: answer },
+          { role: 'user', content: 'Continue exatamente do ponto em que a resposta foi interrompida. Não repita o conteúdo anterior e conclua a resposta.' }
+        ];
+        return this.streamModel(key, modelId, continuationMessages, onText, completeAnswer, continuation + 1);
+      }
+      const notice = '\n\n[Resposta interrompida ao atingir o limite de geração. Peça “continue” para prosseguir.]';
+      onText?.(completeAnswer + notice);
+      return completeAnswer + notice;
+    }
+    return completeAnswer;
   }
 }
