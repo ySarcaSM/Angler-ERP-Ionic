@@ -16,7 +16,7 @@ ERP frontend built with **Ionic + Angular + TypeScript**, using Angular **NgModu
 4. Enable Email/Password in Firebase Authentication.
 5. For every authorized user, create a `users/{uid}` document with `companyId` and `role`. Supported roles: `owner`, `admin`, `operator`, `viewer`.
 6. Publish `firestore.rules` to the Firestore database.
-7. Run `npm start`.
+7. Set up the Gemini backend (steps below) and run `npm start`.
 
 Example user profile (create through Firebase Console or a trusted administrative environment):
 
@@ -26,6 +26,24 @@ Example user profile (create through Firebase Console or a trusted administrativ
   "role": "owner"
 }
 ```
+
+## Gemini Assistant
+
+The Ionic assistant uses only Google Gemini. The API key never enters the browser bundle: local development reads it from `functions/.env`, while production reads it from Firebase Secret Manager. The backend lists the models available to the key, tests candidates in priority order, and falls back if a model is unavailable.
+
+### Local development
+
+1. Copy `functions/.env.example` to `functions/.env` and set `GEMINI_API_KEY` to a Gemini API key from Google AI Studio. Do not commit `functions/.env`.
+2. Start the Functions emulator in one terminal: `firebase emulators:start --only functions --project YOUR_FIREBASE_PROJECT_ID`.
+3. Start Ionic in another terminal: `npm start`.
+
+### Production deployment
+
+1. Select the same Firebase project used by the Ionic app. Cloud Functions deployment requires a Firebase project with billing enabled.
+2. Set the key through Firebase Secret Manager: `firebase functions:secrets:set GEMINI_API_KEY --project YOUR_FIREBASE_PROJECT_ID`. Enter the key at the CLI prompt; do not put it in the command or repository.
+3. Deploy only the function from this repository: `firebase deploy --only functions --project YOUR_FIREBASE_PROJECT_ID`.
+
+The callable function requires Firebase Authentication and an active user profile. The frontend sends only the chat prompt and context; it never receives the Gemini key.
 
 ## Routes
 
