@@ -80,7 +80,7 @@ export class GeminiAiService {
       body: JSON.stringify({
         ...(system ? { systemInstruction: { parts: [{ text: system.content }] } } : {}),
         contents,
-        generationConfig: { temperature: 0.3, maxOutputTokens: 2048 }
+        generationConfig: { maxOutputTokens: 2048 }
       })
     });
     const data = await this.readJson(response);
