@@ -141,7 +141,24 @@ export class AssistantPage implements OnInit {
         return token;
       };
 
-      let html = escapeHtml(value);
+      const readableMath = value
+        .replace(/\\$\\$?([\\s\\S]*?)\\$\\$?/g, '$1')
+        .replace(/\\\\text\\{([^{}]*)\\}/g, '$1')
+        .replace(/\\\\mathrm\\{([^{}]*)\\}/g, '$1')
+        .replace(/\\\\mathbf\\{([^{}]*)\\}/g, '**$1**')
+        .replace(/\\\\lfloor/g, '⌊')
+        .replace(/\\\\rfloor/g, '⌋')
+        .replace(/\\\\times/g, '×')
+        .replace(/\\\\cdot/g, '·')
+        .replace(/\\\\div/g, '÷')
+        .replace(/\\\\leq/g, '≤')
+        .replace(/\\\\geq/g, '≥')
+        .replace(/\\\\approx/g, '≈')
+        .replace(/\\\\%/g, '%')
+        .replace(/\\\\([#      let html = escapeHtml(value);
+_{}])/g, '$1')
+        .replace(/\\\\(?:,|;|quad|qquad)/g, ' ');
+      let html = escapeHtml(readableMath);
       html = html.replace(/\x60([^\x60\n]+)\x60/g, (_match, code: string) => hold('<code>' + code + '</code>'));
       html = html.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_match, label: string, href: string) => {
         const safeHref = href.replace(/&amp;/g, '&');
